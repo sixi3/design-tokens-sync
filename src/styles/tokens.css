@@ -1,0 +1,73 @@
+/* Auto-generated CSS Custom Properties from tokens.json */
+/* This file is updated automatically by scripts/update-tokens.js */
+/* Last updated: 2025-07-06T17:51:23.131Z */
+
+:root {
+  /* Colors from tokens.json */
+  --color-primary-50: #EAFFF2;
+  --color-primary-100: #d0ffe2;
+  --color-primary-200: #a4ffc8;
+  --color-primary-300: #68ffa0;
+  --color-primary-400: #26f471;
+  --color-primary-500: #00bc48;
+  --color-primary-600: #009a3a;
+  --color-primary-700: #007d31;
+  --color-primary-800: #00622a;
+  --color-primary-900: #005124;
+  --color-primary-950: #002d13;
+  --color-secondary-50: #fdfff0;
+  --color-secondary-100: #fbffe0;
+  --color-secondary-200: #f7ffc2;
+  --color-secondary-300: #f1ff98;
+  --color-secondary-400: #e7ff62;
+  --color-secondary-500: #baff29;
+  --color-secondary-600: #a3e620;
+  --color-secondary-700: #8cc518;
+  --color-secondary-800: #75a416;
+  --color-secondary-900: #5d8317;
+  --color-secondary-950: #334a08;
+
+  /* Spacing from tokens.json */
+  --spacing-0: 0rem;
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.25rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-10: 2.5rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+  --spacing-20: 5rem;
+  --spacing-24: 6rem;
+
+  /* Border radius from tokens.json */
+  --border-radius-none: 0;
+  --border-radius-sm: 0.125rem;
+  --border-radius-DEFAULT: 0.25rem;
+  --border-radius-md: 0.375rem;
+  --border-radius-lg: 0.5rem;
+  --border-radius-xl: 0.75rem;
+  --border-radius-2xl: 1rem;
+  --border-radius-3xl: 1.5rem;
+  --border-radius-full: 9999px;
+
+  /* Typography from tokens.json */
+  --typography-fontFamily-primary: DM Sans;
+  --typography-fontFamily-mono: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+  --typography-fontSize-xs: 0.75rem;
+  --typography-fontSize-sm: 0.875rem;
+  --typography-fontSize-base: 1rem;
+  --typography-fontSize-lg: 1.125rem;
+  --typography-fontSize-xl: 1.25rem;
+  --typography-fontSize-2xl: 1.5rem;
+  --typography-fontSize-3xl: 1.875rem;
+  --typography-fontSize-4xl: 2.25rem;
+  --typography-fontSize-5xl: 3rem;
+  --typography-fontSize-6xl: 3.75rem;
+  --typography-fontWeight-normal: 400;
+  --typography-fontWeight-medium: 500;
+  --typography-fontWeight-semibold: 600;
+  --typography-fontWeight-bold: 700;
+}

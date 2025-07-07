@@ -1,0 +1,100 @@
+/* Button Component Styles - Using Design Tokens
+ * These styles demonstrate how to use design tokens in CSS
+ * All tokens are available as CSS custom properties (CSS variables)
+ */
+
+.btn {
+  /* Base styles using design tokens */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  font-family: var(--typography-font-family-sans);
+  font-weight: var(--typography-font-weight-medium);
+  line-height: var(--typography-line-height-normal);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  
+  /* Focus styles */
+  &:focus {
+    outline: 2px solid var(--semantic-colors-border-focus);
+    outline-offset: 2px;
+  }
+  
+  /* Disabled styles */
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/* Primary Button Variant */
+.btn--primary {
+  background-color: var(--component-button-primary-background-color);
+  color: var(--component-button-primary-text-color);
+  border-radius: var(--component-button-primary-border-radius);
+  padding: var(--component-button-primary-padding);
+  
+  &:hover:not(:disabled) {
+    background-color: var(--semantic-colors-brand-secondary);
+    transform: translateY(-1px);
+    box-shadow: var(--core-shadows-md);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: var(--core-shadows-sm);
+  }
+}
+
+/* Secondary Button Variant */
+.btn--secondary {
+  background-color: var(--component-button-secondary-background-color);
+  color: var(--component-button-secondary-text-color);
+  border-color: var(--component-button-secondary-border-color);
+  border-radius: var(--component-button-secondary-border-radius);
+  padding: var(--component-button-secondary-padding);
+  
+  &:hover:not(:disabled) {
+    background-color: var(--semantic-colors-brand-tertiary);
+    border-color: var(--semantic-colors-brand-secondary);
+  }
+  
+  &:active:not(:disabled) {
+    background-color: var(--semantic-colors-brand-primary);
+    color: var(--semantic-colors-text-inverse);
+  }
+}
+
+/* Ghost Button Variant */
+.btn--ghost {
+  background-color: transparent;
+  color: var(--semantic-colors-text-secondary);
+  border: none;
+  border-radius: var(--core-border-radius-md);
+  
+  &:hover:not(:disabled) {
+    background-color: var(--semantic-colors-background-secondary);
+    color: var(--semantic-colors-text-primary);
+  }
+}
+
+/* Size Variants */
+.btn--sm {
+  padding: var(--core-spacing-2) var(--core-spacing-3);
+  font-size: var(--core-typography-font-size-sm);
+  border-radius: var(--core-border-radius-sm);
+}
+
+.btn--md {
+  padding: var(--core-spacing-3) var(--core-spacing-4);
+  font-size: var(--core-typography-font-size-base);
+  border-radius: var(--core-border-radius-md);
+}
+
+.btn--lg {
+  padding: var(--core-spacing-4) var(--core-spacing-6);
+  font-size: var(--core-typography-font-size-lg);
+  border-radius: var(--core-border-radius-lg);
+} 
