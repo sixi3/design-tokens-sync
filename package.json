@@ -47,7 +47,6 @@
     "lint:package": "eslint src test --ext .js,.ts",
     "lint:fix": "eslint src test --ext .js,.ts --fix",
     "build:package": "npm run lint:package && npm test",
-    "prepublishOnly": "npm run build:package",
     "release": "standard-version",
     "release:minor": "standard-version --release-as minor",
     "release:major": "standard-version --release-as major",
