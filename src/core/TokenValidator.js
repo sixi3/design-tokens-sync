@@ -3,6 +3,7 @@ import { loadConfig } from '../utils/config.js';
 /**
  * Token validation engine
  * Validates design tokens structure, values, and consistency
+ * Supports both flat format and Figma Token Studio format
  */
 export class TokenValidator {
   constructor(options = {}) {
@@ -10,14 +11,10 @@ export class TokenValidator {
     this.config = null;
   }
 
-  /**
-   * Initialize validator with configuration
-   */
   async init() {
     if (!this.config) {
-      this.config = await loadConfig(this.options.configPath);
+      this.config = await loadConfig();
     }
-    return this.config;
   }
 
   /**
@@ -64,6 +61,46 @@ export class TokenValidator {
   }
 
   /**
+   * Check if tokens are in Figma Token Studio format
+   */
+  isFigmaTokenStudioFormat(tokens) {
+    return tokens && (
+      tokens.core || 
+      tokens.semantic || 
+      tokens.$themes || 
+      tokens.$metadata
+    );
+  }
+
+  /**
+   * Extract tokens from Figma Token Studio format
+   */
+  extractTokensFromFigmaFormat(tokens) {
+    const extracted = {};
+    
+    // Merge core and semantic tokens
+    if (tokens.core) {
+      Object.assign(extracted, tokens.core);
+    }
+    
+    if (tokens.semantic) {
+      // For semantic tokens, we need to be careful about merging
+      // Let's add them under a semantic prefix to avoid conflicts
+      Object.keys(tokens.semantic).forEach(category => {
+        if (extracted[category]) {
+          // Merge with existing category
+          Object.assign(extracted[category], tokens.semantic[category]);
+        } else {
+          // Add new category
+          extracted[category] = tokens.semantic[category];
+        }
+      });
+    }
+    
+    return extracted;
+  }
+
+  /**
    * Validate basic structure
    */
   validateStructure(tokens, errors, warnings) {
@@ -72,14 +109,32 @@ export class TokenValidator {
       return;
     }
 
-    if (!tokens.colors) {
-      errors.push('Missing colors category - this is required');
+    // Handle Figma Token Studio format
+    const isFigmaFormat = this.isFigmaTokenStudioFormat(tokens);
+    let tokensToValidate = tokens;
+    
+    if (isFigmaFormat) {
+      tokensToValidate = this.extractTokensFromFigmaFormat(tokens);
+      
+      // Validate Figma Token Studio specific structure
+      if (tokens.$themes && !Array.isArray(tokens.$themes)) {
+        warnings.push('$themes should be an array in Figma Token Studio format');
+      }
+      
+      if (tokens.$metadata && typeof tokens.$metadata !== 'object') {
+        warnings.push('$metadata should be an object in Figma Token Studio format');
+      }
+    }
+
+    // Check for colors category (now extracted from core/semantic if needed)
+    if (!tokensToValidate.colors) {
+      errors.push('Missing required token category: colors');
     }
 
     // Check for common typos or incorrect structures
     const commonTypos = ['colour', 'color', 'spacings', 'typo', 'fonts'];
     commonTypos.forEach(typo => {
-      if (tokens[typo] && !tokens[this.getCorrectCategory(typo)]) {
+      if (tokensToValidate[typo] && !tokensToValidate[this.getCorrectCategory(typo)]) {
         warnings.push(`Found "${typo}" - did you mean "${this.getCorrectCategory(typo)}"?`);
       }
     });
@@ -91,17 +146,22 @@ export class TokenValidator {
   validateRequiredCategories(tokens, errors, warnings) {
     const required = this.config?.tokens?.validation?.required || ['colors'];
     
+    // Extract tokens if in Figma format
+    const tokensToValidate = this.isFigmaTokenStudioFormat(tokens) 
+      ? this.extractTokensFromFigmaFormat(tokens) 
+      : tokens;
+    
     required.forEach(category => {
-      if (!tokens[category] || Object.keys(tokens[category]).length === 0) {
+      if (!tokensToValidate[category] || Object.keys(tokensToValidate[category]).length === 0) {
         errors.push(`Missing required token category: ${category}`);
       }
     });
 
     // Specific color validation
-    if (tokens.colors) {
+    if (tokensToValidate.colors) {
       const requiredColorCategories = ['primary'];
       requiredColorCategories.forEach(colorCategory => {
-        if (!tokens.colors[colorCategory] || Object.keys(tokens.colors[colorCategory]).length === 0) {
+        if (!tokensToValidate.colors[colorCategory] || Object.keys(tokensToValidate.colors[colorCategory]).length === 0) {
           errors.push(`Missing required color category: colors.${colorCategory}`);
         }
       });
@@ -112,10 +172,15 @@ export class TokenValidator {
    * Validate optional categories
    */
   validateOptionalCategories(tokens, errors, warnings) {
-    const optional = this.config?.tokens?.validation?.optional || ['spacing', 'typography'];
+    const optional = this.config?.tokens?.validation?.optional || ['spacing', 'typography', 'borderRadius'];
+    
+    // Extract tokens if in Figma format
+    const tokensToValidate = this.isFigmaTokenStudioFormat(tokens) 
+      ? this.extractTokensFromFigmaFormat(tokens) 
+      : tokens;
     
     optional.forEach(category => {
-      if (!tokens[category]) {
+      if (!tokensToValidate[category]) {
         warnings.push(`Optional token category not found: ${category}`);
       }
     });
@@ -125,15 +190,23 @@ export class TokenValidator {
    * Validate color values
    */
   validateColors(tokens, errors, warnings) {
-    if (!tokens.colors) return;
+    // Extract tokens if in Figma format
+    const tokensToValidate = this.isFigmaTokenStudioFormat(tokens) 
+      ? this.extractTokensFromFigmaFormat(tokens) 
+      : tokens;
+      
+    if (!tokensToValidate.colors) return;
 
-    Object.entries(tokens.colors).forEach(([category, shades]) => {
+    Object.entries(tokensToValidate.colors).forEach(([category, shades]) => {
       if (!shades || typeof shades !== 'object') {
         errors.push(`Invalid color category structure: colors.${category}`);
         return;
       }
 
-      Object.entries(shades).forEach(([shade, value]) => {
+      Object.entries(shades).forEach(([shade, tokenData]) => {
+        // Handle both Token Studio format {value, type} and simple string values
+        const value = this.getTokenValue(tokenData);
+        
         if (!this.isValidColor(value)) {
           errors.push(`Invalid color value: colors.${category}.${shade} = "${value}"`);
         }
@@ -163,43 +236,56 @@ export class TokenValidator {
    * Validate spacing values
    */
   validateSpacing(tokens, errors, warnings) {
-    if (!tokens.spacing) return;
+    // Extract tokens if in Figma format
+    const tokensToValidate = this.isFigmaTokenStudioFormat(tokens) 
+      ? this.extractTokensFromFigmaFormat(tokens) 
+      : tokens;
+      
+    if (!tokensToValidate.spacing) return;
 
-    const requiredSpacing = ['0', '1', '2', '4', '8', '16'];
-    const missingSpacing = requiredSpacing.filter(space => !tokens.spacing[space]);
-    
-    if (missingSpacing.length > 0) {
-      warnings.push(`Missing common spacing values: ${missingSpacing.join(', ')}`);
-    }
-
-    Object.entries(tokens.spacing).forEach(([key, value]) => {
+    Object.entries(tokensToValidate.spacing).forEach(([key, tokenData]) => {
+      const value = this.getTokenValue(tokenData);
+      
       if (!this.isValidSpacing(value)) {
         errors.push(`Invalid spacing value: spacing.${key} = "${value}"`);
       }
     });
+
+    // Check for common spacing values
+    const commonSpacing = ['0', '1', '2', '4', '8', '16'];
+    const missingSpacing = commonSpacing.filter(spacing => !tokensToValidate.spacing[spacing]);
+    if (missingSpacing.length > 0) {
+      warnings.push(`Consider adding common spacing values: ${missingSpacing.join(', ')}`);
+    }
   }
 
   /**
    * Validate typography
    */
   validateTypography(tokens, errors, warnings) {
-    if (!tokens.typography) return;
+    // Extract tokens if in Figma format
+    const tokensToValidate = this.isFigmaTokenStudioFormat(tokens) 
+      ? this.extractTokensFromFigmaFormat(tokens) 
+      : tokens;
+      
+    if (!tokensToValidate.typography) return;
 
     // Check required typography categories
     const requiredTypo = ['fontFamily'];
     requiredTypo.forEach(category => {
-      if (!tokens.typography[category]) {
+      if (!tokensToValidate.typography[category]) {
         warnings.push(`Missing typography category: typography.${category}`);
       }
     });
 
     // Validate font families
-    if (tokens.typography.fontFamily) {
-      if (!tokens.typography.fontFamily.sans) {
+    if (tokensToValidate.typography.fontFamily) {
+      if (!tokensToValidate.typography.fontFamily.sans) {
         errors.push('Missing sans-serif font family (typography.fontFamily.sans)');
       }
 
-      Object.entries(tokens.typography.fontFamily).forEach(([key, value]) => {
+      Object.entries(tokensToValidate.typography.fontFamily).forEach(([key, tokenData]) => {
+        const value = this.getTokenValue(tokenData);
         if (typeof value !== 'string' || value.trim().length === 0) {
           errors.push(`Invalid font family: typography.fontFamily.${key} = "${value}"`);
         }
@@ -207,8 +293,9 @@ export class TokenValidator {
     }
 
     // Validate font sizes
-    if (tokens.typography.fontSize) {
-      Object.entries(tokens.typography.fontSize).forEach(([key, value]) => {
+    if (tokensToValidate.typography.fontSize) {
+      Object.entries(tokensToValidate.typography.fontSize).forEach(([key, tokenData]) => {
+        const value = this.getTokenValue(tokenData);
         if (!this.isValidSize(value)) {
           errors.push(`Invalid font size: typography.fontSize.${key} = "${value}"`);
         }
@@ -217,76 +304,70 @@ export class TokenValidator {
   }
 
   /**
-   * Validate consistency across token sets
+   * Validate token consistency
    */
   validateConsistency(tokens, errors, warnings) {
-    // Check for naming consistency
-    this.validateNamingConsistency(tokens, warnings);
-    
-    // Check for value consistency
-    this.validateValueConsistency(tokens, warnings);
-    
-    // Check for scale consistency
-    this.validateScaleConsistency(tokens, warnings);
-  }
+    // Extract tokens if in Figma format
+    const tokensToValidate = this.isFigmaTokenStudioFormat(tokens) 
+      ? this.extractTokensFromFigmaFormat(tokens) 
+      : tokens;
 
-  /**
-   * Validate naming consistency
-   */
-  validateNamingConsistency(tokens, warnings) {
-    // Check for mixed naming conventions
-    const allKeys = this.getAllTokenKeys(tokens);
+    // Collect all values to check for duplicates
+    const allValues = [];
     
-    const hasKebabCase = allKeys.some(key => key.includes('-'));
-    const hasCamelCase = allKeys.some(key => /[a-z][A-Z]/.test(key));
-    const hasSnakeCase = allKeys.some(key => key.includes('_'));
-    
-    const conventions = [hasKebabCase, hasCamelCase, hasSnakeCase].filter(Boolean).length;
-    if (conventions > 1) {
-      warnings.push('Mixed naming conventions detected. Consider using consistent naming (kebab-case, camelCase, or snake_case)');
-    }
-  }
-
-  /**
-   * Validate value consistency
-   */
-  validateValueConsistency(tokens, warnings) {
-    // Check for duplicate values that might indicate inconsistency
-    const values = this.getAllTokenValues(tokens);
-    const duplicates = this.findDuplicateValues(values);
-    
-    if (duplicates.length > 0) {
-      duplicates.forEach(duplicate => {
-        warnings.push(`Duplicate value "${duplicate.value}" found in: ${duplicate.tokens.join(', ')}`);
+    const collectValues = (obj, path = '') => {
+      Object.entries(obj).forEach(([key, value]) => {
+        const currentPath = path ? `${path}.${key}` : key;
+        
+        if (value && typeof value === 'object') {
+          if (this.getTokenValue(value) !== undefined) {
+            // This is a token
+            allValues.push({
+              path: currentPath,
+              value: this.getTokenValue(value)
+            });
+          } else {
+            // This is a nested object
+            collectValues(value, currentPath);
+          }
+        } else if (typeof value === 'string') {
+          // Direct string value
+          allValues.push({
+            path: currentPath,
+            value: value
+          });
+        }
       });
-    }
+    };
+
+    collectValues(tokensToValidate);
+
+    // Find duplicates
+    const valueCounts = {};
+    allValues.forEach(({ path, value }) => {
+      if (!valueCounts[value]) {
+        valueCounts[value] = [];
+      }
+      valueCounts[value].push(path);
+    });
+
+    Object.entries(valueCounts).forEach(([value, paths]) => {
+      if (paths.length > 1 && value !== '0' && value !== 'transparent') {
+        warnings.push(`Duplicate value "${value}" found in: ${paths.join(', ')}`);
+      }
+    });
   }
 
   /**
-   * Validate scale consistency
+   * Get token value from either Token Studio format or direct value
    */
-  validateScaleConsistency(tokens, warnings) {
-    // Check spacing scale
-    if (tokens.spacing) {
-      const spacingValues = Object.values(tokens.spacing)
-        .map(val => this.parseSpacingValue(val))
-        .filter(val => val !== null)
-        .sort((a, b) => a - b);
-      
-      if (spacingValues.length > 2) {
-        const ratios = [];
-        for (let i = 1; i < spacingValues.length; i++) {
-          ratios.push(spacingValues[i] / spacingValues[i - 1]);
-        }
-        
-        const avgRatio = ratios.reduce((sum, ratio) => sum + ratio, 0) / ratios.length;
-        const inconsistentRatios = ratios.filter(ratio => Math.abs(ratio - avgRatio) > 0.5);
-        
-        if (inconsistentRatios.length > ratios.length * 0.3) {
-          warnings.push('Spacing scale appears inconsistent. Consider using a consistent ratio or modular scale');
-        }
-      }
+  getTokenValue(tokenData) {
+    if (tokenData && typeof tokenData === 'object') {
+      // Token Studio format: {value: "...", type: "..."}
+      return tokenData.value || tokenData.$value;
     }
+    // Direct value
+    return tokenData;
   }
 
   /**
@@ -340,7 +421,15 @@ export class TokenValidator {
   }
 
   isValidSize(value) {
-    return this.isValidSpacing(value); // Same validation for now
+    if (typeof value !== 'string') return false;
+    
+    // CSS size units
+    if (/^[\d.]+([a-z%]+)?$/i.test(value)) return true;
+    
+    // Token references
+    if (value.startsWith('{') && value.endsWith('}')) return true;
+    
+    return false;
   }
 
   isNumericShade(shade) {
@@ -348,17 +437,24 @@ export class TokenValidator {
   }
 
   countCategories(tokens) {
-    return Object.keys(tokens).filter(key => typeof tokens[key] === 'object').length;
+    const tokensToCount = this.isFigmaTokenStudioFormat(tokens) 
+      ? this.extractTokensFromFigmaFormat(tokens) 
+      : tokens;
+    return Object.keys(tokensToCount).filter(key => typeof tokensToCount[key] === 'object').length;
   }
 
   countTokens(tokens) {
     let count = 0;
     
+    const tokensToCount = this.isFigmaTokenStudioFormat(tokens) 
+      ? this.extractTokensFromFigmaFormat(tokens) 
+      : tokens;
+    
     const countInCategory = (obj) => {
       Object.values(obj).forEach(value => {
         if (value && typeof value === 'object') {
-          if (value.value !== undefined) {
-            count++; // Token Studio format
+          if (this.getTokenValue(value) !== undefined) {
+            count++; // Token Studio format or direct token
           } else {
             countInCategory(value); // Nested structure
           }
@@ -368,79 +464,12 @@ export class TokenValidator {
       });
     };
     
-    Object.values(tokens).forEach(category => {
+    Object.values(tokensToCount).forEach(category => {
       if (category && typeof category === 'object') {
         countInCategory(category);
       }
     });
     
     return count;
-  }
-
-  getAllTokenKeys(tokens) {
-    const keys = [];
-    
-    const extractKeys = (obj, prefix = '') => {
-      Object.keys(obj).forEach(key => {
-        const fullKey = prefix ? `${prefix}.${key}` : key;
-        keys.push(key);
-        
-        if (obj[key] && typeof obj[key] === 'object' && !obj[key].value) {
-          extractKeys(obj[key], fullKey);
-        }
-      });
-    };
-    
-    extractKeys(tokens);
-    return keys;
-  }
-
-  getAllTokenValues(tokens) {
-    const values = [];
-    
-    const extractValues = (obj, path = '') => {
-      Object.entries(obj).forEach(([key, value]) => {
-        const fullPath = path ? `${path}.${key}` : key;
-        
-        if (value && typeof value === 'object' && value.value !== undefined) {
-          values.push({ path: fullPath, value: value.value });
-        } else if (value && typeof value === 'object') {
-          extractValues(value, fullPath);
-        } else {
-          values.push({ path: fullPath, value });
-        }
-      });
-    };
-    
-    extractValues(tokens);
-    return values;
-  }
-
-  findDuplicateValues(values) {
-    const valueMap = new Map();
-    const duplicates = [];
-    
-    values.forEach(({ path, value }) => {
-      if (valueMap.has(value)) {
-        valueMap.get(value).push(path);
-      } else {
-        valueMap.set(value, [path]);
-      }
-    });
-    
-    valueMap.forEach((tokens, value) => {
-      if (tokens.length > 1) {
-        duplicates.push({ value, tokens });
-      }
-    });
-    
-    return duplicates;
-  }
-
-  parseSpacingValue(value) {
-    if (typeof value !== 'string') return null;
-    
-    const match = value.match(/^([\d.]+)/);
-    return match ? parseFloat(match[1]) : null;
   }
 } 
