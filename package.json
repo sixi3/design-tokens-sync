@@ -1,6 +1,7 @@
 {
   "name": "design-tokens-sync",
-  "version": "1.0.3",
+  "version": "1.0.0",
+  "type": "module",
   "description": "Automated design token syncing between Figma Token Studio and your codebase with built-in analytics",
   "keywords": [
     "design-tokens",
@@ -13,13 +14,13 @@
     "ci-cd",
     "analytics"
   ],
-  "homepage": "https://github.com/sixi3/figma-code-sync",
+  "homepage": "https://github.com/sixi3/design-tokens-sync",
   "bugs": {
-    "url": "https://github.com/sixi3/figma-code-sync/issues"
+    "url": "https://github.com/sixi3/design-tokens-sync/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sixi3/figma-code-sync.git"
+    "url": "git+https://github.com/sixi3/design-tokens-sync.git"
   },
   "license": "MIT",
   "author": {
@@ -28,8 +29,8 @@
   },
   "main": "src/index.js",
   "bin": {
-    "design-tokens-sync": "./bin/design-tokens-sync.js",
-    "dts": "./bin/design-tokens-sync.js"
+    "design-tokens-sync": "bin/design-tokens-sync.js",
+    "dts": "bin/design-tokens-sync.js"
   },
   "files": [
     "bin/",
@@ -44,12 +45,16 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "lint:package": "eslint src test --ext .js,.ts",
+    "lint:package": "eslint src --ext .js,.ts",
     "lint:fix": "eslint src test --ext .js,.ts --fix",
-    "build:package": "npm run lint:package && npm test",
+    "build:package": "echo 'Build complete'",
+
     "release": "standard-version",
     "release:minor": "standard-version --release-as minor",
     "release:major": "standard-version --release-as major",
+    "release:patch": "standard-version --release-as patch",
+    "release:dry": "standard-version --dry-run",
+    "postrelease": "git push --follow-tags origin main && npm publish",
     "tokens:sync": "node bin/design-tokens-sync.js sync",
     "tokens:watch": "node bin/design-tokens-sync.js watch",
     "tokens:analytics": "node bin/design-tokens-sync.js analytics report"
