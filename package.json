@@ -1,6 +1,6 @@
 {
   "name": "design-tokens-sync",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "type": "module",
   "description": "Automated design token syncing between Figma Token Studio and your codebase with built-in analytics",
   "keywords": [
