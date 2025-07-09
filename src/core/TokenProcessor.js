@@ -82,6 +82,7 @@ export class TokenProcessor {
       spacing: this.extractSpacing(rawTokens),
       typography: this.extractTypography(rawTokens),
       borderRadius: this.extractBorderRadius(rawTokens),
+      sizing: this.extractSizing(rawTokens),
       shadows: this.extractShadows(rawTokens),
       opacity: this.extractOpacity(rawTokens),
       zIndex: this.extractZIndex(rawTokens),
@@ -100,16 +101,19 @@ export class TokenProcessor {
   extractColors(rawTokens) {
     const colors = {};
     
-    // Handle both Token Studio format and flat format
+    // Handle different Token Studio formats and flat format
     if (rawTokens.core?.colors || rawTokens.semantic?.colors) {
-      // Token Studio format
+      // Token Studio format with core/semantic structure
       const coreColors = rawTokens.core?.colors || {};
       const semanticColors = rawTokens.semantic?.colors || {};
       
       Object.assign(colors, this.flattenTokenCategory(coreColors));
       Object.assign(colors, this.flattenTokenCategory(semanticColors));
+    } else if (rawTokens.color) {
+      // Token Studio format with direct 'color' field (singular)
+      Object.assign(colors, this.flattenTokenCategory(rawTokens.color));
     } else if (rawTokens.colors) {
-      // Direct colors format
+      // Direct colors format (plural)
       Object.assign(colors, this.flattenTokenCategory(rawTokens.colors));
     }
 
@@ -143,13 +147,32 @@ export class TokenProcessor {
       letterSpacing: {}
     };
 
-    const typoData = rawTokens.core?.typography || rawTokens.typography || {};
+    // Handle different Token Studio format variations
+    const typoData = rawTokens.core?.typography || rawTokens.typography || rawTokens.text || {};
     
-    Object.keys(typography).forEach(category => {
-      if (typoData[category]) {
-        typography[category] = this.flattenTokenCategory(typoData[category]);
+    // Map Token Studio text structure to typography categories
+    if (rawTokens.text) {
+      // Token Studio format with 'text' field
+      if (typoData['font family']) {
+        typography.fontFamily = this.flattenTokenCategory(typoData['font family']);
       }
-    });
+      if (typoData['font-size']) {
+        typography.fontSize = this.flattenTokenCategory(typoData['font-size']);
+      }
+      if (typoData['font weight']) {
+        typography.fontWeight = this.flattenTokenCategory(typoData['font weight']);
+      }
+      if (typoData['font line height']) {
+        typography.lineHeight = this.flattenTokenCategory(typoData['font line height']);
+      }
+    } else {
+      // Standard format
+      Object.keys(typography).forEach(category => {
+        if (typoData[category]) {
+          typography[category] = this.flattenTokenCategory(typoData[category]);
+        }
+      });
+    }
 
     // Provide defaults if empty
     if (Object.keys(typography.fontFamily).length === 0) {
@@ -172,6 +195,9 @@ export class TokenProcessor {
       Object.assign(borderRadius, this.flattenTokenCategory(rawTokens.core.borderRadius));
     } else if (rawTokens.borderRadius) {
       Object.assign(borderRadius, this.flattenTokenCategory(rawTokens.borderRadius));
+    } else if (rawTokens.radius) {
+      // Token Studio format with 'radius' field
+      Object.assign(borderRadius, this.flattenTokenCategory(rawTokens.radius));
     }
 
     // Provide defaults
@@ -188,6 +214,21 @@ export class TokenProcessor {
     }
 
     return borderRadius;
+  }
+
+  /**
+   * Extract sizing tokens
+   */
+  extractSizing(rawTokens) {
+    const sizing = {};
+    
+    if (rawTokens.core?.sizing) {
+      Object.assign(sizing, this.flattenTokenCategory(rawTokens.core.sizing));
+    } else if (rawTokens.sizing) {
+      Object.assign(sizing, this.flattenTokenCategory(rawTokens.sizing));
+    }
+
+    return sizing;
   }
 
   /**
@@ -305,11 +346,22 @@ export class TokenProcessor {
     try {
       console.log('🔄 Starting token sync...');
 
-      // Load tokens
-      await this.loadTokens(true);
+      // Load raw tokens for validation
+      if (!this.config) {
+        await this.init();
+      }
 
-      // Validate tokens
-      const validation = await this.validator.validate(this.tokens);
+      const tokensPath = path.resolve(this.config.tokens.input);
+      
+      if (!await fs.pathExists(tokensPath)) {
+        throw new Error(`Tokens file not found: ${tokensPath}`);
+      }
+
+      const rawTokens = await fs.readJSON(tokensPath);
+      console.log(`✅ Design tokens loaded from: ${tokensPath}`);
+
+      // Validate using raw tokens (preserves Figma Token Studio format)
+      const validation = await this.validator.validate(rawTokens);
       if (!validation.isValid && !options.force) {
         console.error('❌ Token validation failed:', validation.errors);
         throw new Error('Token validation failed');
@@ -318,6 +370,9 @@ export class TokenProcessor {
       if (validation.warnings.length > 0) {
         console.warn('⚠️ Token warnings:', validation.warnings);
       }
+
+      // Transform tokens for file generation
+      this.tokens = this.transformTokens(rawTokens);
 
       // Generate output files
       await this.fileGenerator.generateAll(this.tokens, this.config);

@@ -48,16 +48,16 @@
     "lint:package": "eslint src --ext .js,.ts",
     "lint:fix": "eslint src test --ext .js,.ts --fix",
     "build:package": "echo 'Build complete'",
-
     "release": "standard-version",
     "release:minor": "standard-version --release-as minor",
     "release:major": "standard-version --release-as major",
     "release:patch": "standard-version --release-as patch",
     "release:dry": "standard-version --dry-run",
     "postrelease": "git push --follow-tags origin main && npm publish",
-    "tokens:sync": "node bin/design-tokens-sync.js sync",
-    "tokens:watch": "node bin/design-tokens-sync.js watch",
-    "tokens:analytics": "node bin/design-tokens-sync.js analytics report"
+    "tokens:sync": "design-tokens-sync sync",
+    "tokens:watch": "design-tokens-sync watch",
+    "tokens:analytics": "design-tokens-sync analytics report",
+    "tokens:validate": "design-tokens-sync validate"
   },
   "dependencies": {
     "chalk": "^5.4.1",

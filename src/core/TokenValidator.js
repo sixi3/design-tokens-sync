@@ -68,7 +68,9 @@ export class TokenValidator {
       tokens.core || 
       tokens.semantic || 
       tokens.$themes || 
-      tokens.$metadata
+      tokens.$metadata ||
+      // Also detect direct Token Studio format with root-level categories
+      (tokens.color || tokens.text || tokens.spacing || tokens.radius || tokens.sizing)
     );
   }
 
@@ -78,7 +80,7 @@ export class TokenValidator {
   extractTokensFromFigmaFormat(tokens) {
     const extracted = {};
     
-    // Merge core and semantic tokens
+    // Handle nested format (core/semantic structure)
     if (tokens.core) {
       Object.assign(extracted, tokens.core);
     }
@@ -95,6 +97,23 @@ export class TokenValidator {
           extracted[category] = tokens.semantic[category];
         }
       });
+    }
+    
+    // Handle direct Token Studio format with root-level categories
+    if (tokens.color) {
+      extracted.colors = tokens.color;
+    }
+    if (tokens.text) {
+      extracted.typography = tokens.text;
+    }
+    if (tokens.spacing) {
+      extracted.spacing = tokens.spacing;
+    }
+    if (tokens.radius) {
+      extracted.borderRadius = tokens.radius;
+    }
+    if (tokens.sizing) {
+      extracted.sizing = tokens.sizing;
     }
     
     return extracted;
@@ -152,19 +171,34 @@ export class TokenValidator {
       : tokens;
     
     required.forEach(category => {
-      if (!tokensToValidate[category] || Object.keys(tokensToValidate[category]).length === 0) {
+      // Handle nested category references like 'core.colors'
+      const categoryPath = category.split('.');
+      let currentObject = this.isFigmaTokenStudioFormat(tokens) ? tokens : tokensToValidate;
+      let found = true;
+      
+      for (const segment of categoryPath) {
+        if (!currentObject || !currentObject[segment]) {
+          found = false;
+          break;
+        }
+        currentObject = currentObject[segment];
+      }
+      
+      if (!found || (currentObject && typeof currentObject === 'object' && Object.keys(currentObject).length === 0)) {
         errors.push(`Missing required token category: ${category}`);
       }
     });
 
-    // Specific color validation
+    // Specific color validation - check in extracted tokens
     if (tokensToValidate.colors) {
-      const requiredColorCategories = ['primary'];
-      requiredColorCategories.forEach(colorCategory => {
-        if (!tokensToValidate.colors[colorCategory] || Object.keys(tokensToValidate.colors[colorCategory]).length === 0) {
-          errors.push(`Missing required color category: colors.${colorCategory}`);
-        }
-      });
+      const hasAnyColorCategory = Object.keys(tokensToValidate.colors).some(key => 
+        tokensToValidate.colors[key] && typeof tokensToValidate.colors[key] === 'object' && 
+        Object.keys(tokensToValidate.colors[key]).length > 0
+      );
+      
+      if (!hasAnyColorCategory) {
+        errors.push(`Missing required color category: colors must contain at least one color group`);
+      }
     }
   }
 
@@ -280,16 +314,38 @@ export class TokenValidator {
 
     // Validate font families
     if (tokensToValidate.typography.fontFamily) {
-      if (!tokensToValidate.typography.fontFamily.sans) {
-        errors.push('Missing sans-serif font family (typography.fontFamily.sans)');
-      }
-
       Object.entries(tokensToValidate.typography.fontFamily).forEach(([key, tokenData]) => {
         const value = this.getTokenValue(tokenData);
-        if (typeof value !== 'string' || value.trim().length === 0) {
-          errors.push(`Invalid font family: typography.fontFamily.${key} = "${value}"`);
+        
+        // Handle both string and array font family values
+        if (Array.isArray(value)) {
+          if (value.length === 0) {
+            errors.push(`Empty font family array: typography.fontFamily.${key}`);
+          } else {
+            // Check each font in the array
+            const invalidFonts = value.filter(font => !this.isValidFontFamily(font));
+            if (invalidFonts.length > 0) {
+              warnings.push(`Invalid fonts in family: typography.fontFamily.${key} = [${invalidFonts.join(', ')}]`);
+            }
+          }
+        } else if (typeof value === 'string') {
+          if (value.trim().length === 0) {
+            errors.push(`Empty font family: typography.fontFamily.${key}`);
+          } else {
+            // Check for valid CSS font family syntax
+            if (!this.isValidFontFamily(value)) {
+              warnings.push(`Font family may need quotes: typography.fontFamily.${key} = "${value}"`);
+            }
+          }
+        } else if (value !== undefined && value !== null) {
+          errors.push(`Invalid font family type: typography.fontFamily.${key} = "${value}" (expected string or array)`);
         }
       });
+      
+      // Check for recommended font families
+      if (!tokensToValidate.typography.fontFamily.sans && !tokensToValidate.typography.fontFamily.primary) {
+        warnings.push('Consider adding a sans-serif font family (typography.fontFamily.sans or typography.fontFamily.primary)');
+      }
     }
 
     // Validate font sizes
@@ -430,6 +486,17 @@ export class TokenValidator {
     if (value.startsWith('{') && value.endsWith('}')) return true;
     
     return false;
+  }
+
+  isValidFontFamily(value) {
+    if (typeof value !== 'string') return false;
+    
+    // Token references
+    if (value.startsWith('{') && value.endsWith('}')) return true;
+    
+    // Basic CSS font family check - allow common patterns
+    // This is lenient to avoid false positives
+    return value.trim().length > 0;
   }
 
   isNumericShade(shade) {

@@ -36,6 +36,21 @@ export class FileGenerator {
       results.scss = await this.generateSCSS(tokens, config.output.scss);
     }
 
+    // Generate iOS Swift
+    if (config.output.ios) {
+      results.ios = await this.generateIOS(tokens, config.output.ios);
+    }
+
+    // Generate Android XML
+    if (config.output.android) {
+      results.android = await this.generateAndroid(tokens, config.output.android);
+    }
+
+    // Generate Xamarin (if implemented)
+    if (config.output.xamarin) {
+      results.xamarin = await this.generateXamarin(tokens, config.output.xamarin);
+    }
+
     return results;
   }
 
@@ -490,11 +505,33 @@ export default ${JSON.stringify(config, null, 2)};
     return { path: outputPath, content: xml };
   }
 
+  async generateXamarin(tokens, outputPath) {
+    // Xamarin XAML resource dictionary
+    const xaml = this.generateXamarinXAML(tokens);
+    await fs.ensureDir(path.dirname(outputPath));
+    await fs.writeFile(outputPath, xaml);
+    
+    console.log(`✅ Generated Xamarin XAML: ${outputPath}`);
+    return { path: outputPath, content: xaml };
+  }
+
   /**
    * Utility methods
    */
   kebabCase(str) {
     return str.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase();
+  }
+
+  toCamelCase(str) {
+    return str
+      .replace(/[-_\s]+(.)?/g, (_, c) => c ? c.toUpperCase() : '')
+      .replace(/^./, c => c.toLowerCase());
+  }
+
+  toPascalCase(str) {
+    return str
+      .replace(/[-_\s]+(.)?/g, (_, c) => c ? c.toUpperCase() : '')
+      .replace(/^./, c => c.toUpperCase());
   }
 
   generateSwiftColors(tokens) {
@@ -505,13 +542,19 @@ export default ${JSON.stringify(config, null, 2)};
     swift.push('extension UIColor {');
     
     if (tokens.colors) {
-      Object.entries(tokens.colors).forEach(([category, shades]) => {
-        if (shades && typeof shades === 'object') {
-          Object.entries(shades).forEach(([shade, value]) => {
-            if (value.startsWith('#')) {
-              swift.push(`    static let ${category}${shade.charAt(0).toUpperCase() + shade.slice(1)} = UIColor(hex: "${value}")`);
+      Object.entries(tokens.colors).forEach(([key, value]) => {
+        if (typeof value === 'object' && value !== null) {
+          // Nested structure: category -> shade -> value
+          Object.entries(value).forEach(([shade, colorValue]) => {
+            if (typeof colorValue === 'string' && colorValue.startsWith('#')) {
+              const varName = this.toCamelCase(`${key} ${shade}`);
+              swift.push(`    static let ${varName} = UIColor(hex: "${colorValue}")`);
             }
           });
+        } else if (typeof value === 'string' && value.startsWith('#')) {
+          // Flat structure: key -> value
+          const varName = this.toCamelCase(key);
+          swift.push(`    static let ${varName} = UIColor(hex: "${value}")`);
         }
       });
     }
@@ -527,18 +570,55 @@ export default ${JSON.stringify(config, null, 2)};
     xml.push('<resources>');
     
     if (tokens.colors) {
-      Object.entries(tokens.colors).forEach(([category, shades]) => {
-        if (shades && typeof shades === 'object') {
-          Object.entries(shades).forEach(([shade, value]) => {
-            if (value.startsWith('#')) {
-              xml.push(`    <color name="${category}_${shade}">${value}</color>`);
+      Object.entries(tokens.colors).forEach(([key, value]) => {
+        if (typeof value === 'object' && value !== null) {
+          // Nested structure: category -> shade -> value
+          Object.entries(value).forEach(([shade, colorValue]) => {
+            if (typeof colorValue === 'string' && colorValue.startsWith('#')) {
+              xml.push(`    <color name="${key}_${shade}">${colorValue}</color>`);
             }
           });
+        } else if (typeof value === 'string' && value.startsWith('#')) {
+          // Flat structure: key -> value
+          const colorName = key.replace(/-/g, '_');
+          xml.push(`    <color name="${colorName}">${value}</color>`);
         }
       });
     }
     
     xml.push('</resources>');
     return xml.join('\n');
+  }
+
+  generateXamarinXAML(tokens) {
+    const xaml = [];
+    xaml.push('<?xml version="1.0" encoding="utf-8"?>');
+    xaml.push('<!-- Design Tokens - Auto-generated Xamarin XAML Colors -->');
+    xaml.push('<ResourceDictionary xmlns="http://xamarin.com/schemas/2014/forms"');
+    xaml.push('                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">');
+    xaml.push('');
+    
+    if (tokens.colors) {
+      xaml.push('    <!-- Colors -->');
+      Object.entries(tokens.colors).forEach(([key, value]) => {
+        if (typeof value === 'object' && value !== null) {
+          // Nested structure: category -> shade -> value
+          Object.entries(value).forEach(([shade, colorValue]) => {
+            if (typeof colorValue === 'string' && colorValue.startsWith('#')) {
+              const colorName = this.toPascalCase(`${key} ${shade}`);
+              xaml.push(`    <Color x:Key="${colorName}">${colorValue}</Color>`);
+            }
+          });
+        } else if (typeof value === 'string' && value.startsWith('#')) {
+          // Flat structure: key -> value
+          const colorName = this.toPascalCase(key);
+          xaml.push(`    <Color x:Key="${colorName}">${value}</Color>`);
+        }
+      });
+    }
+    
+    xaml.push('');
+    xaml.push('</ResourceDictionary>');
+    return xaml.join('\n');
   }
 } 

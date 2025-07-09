@@ -1,0 +1,120 @@
+name: 🔍 Pre-commit Token Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches-ignore:
+      - main
+      - develop
+
+jobs:
+  validate-tokens:
+    name: 🔍 Validate Design Tokens
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: ⚡ Install dependencies
+        run: npm ci
+      
+      - name: 🔎 Check if tokens changed
+        id: changed-files
+        uses: tj-actions/changed-files@v40
+        with:
+          files: |
+            tokens.json
+            design-tokens.config.js
+      
+      - name: ✅ Validate token structure
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          echo "Design tokens have changed, running validation..."
+          npm run tokens:validate
+      
+      - name: 🎨 Test token sync
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          echo "Testing token synchronization..."
+          npm run tokens:sync
+      
+      - name: 📊 Generate analytics preview
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          echo "Generating analytics preview..."
+          npm run tokens:analytics collect
+          npm run tokens:analytics report
+      
+      - name: 📤 Upload validation artifacts
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: token-validation-${{ github.sha }}
+          path: |
+            src/styles/tokens.css
+            src/types/tokens.d.ts
+            tailwind.config.js
+            .tokens-analytics/
+          retention-days: 7
+      
+      - name: 💬 Comment on PR
+        if: github.event_name == 'pull_request' && steps.changed-files.outputs.any_changed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `## 🔍 Design Token Validation Results
+            
+            ✅ **Validation Passed!**
+            
+            Your design token changes have been validated successfully:
+            
+            - ✅ Token structure is valid
+            - ✅ CSS generation works
+            - ✅ TypeScript definitions generated
+            - ✅ Tailwind config updated
+            - ✅ Analytics preview created
+            
+            **Changed Files:**
+            \`\`\`
+            ${{ steps.changed-files.outputs.all_changed_files }}
+            \`\`\`
+            
+            📦 **Artifacts:** Generated files are available in the workflow artifacts for preview.
+            
+            <sub>🤖 Auto-generated validation by design-tokens-sync</sub>`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+      
+      - name: ✅ All checks passed
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          echo "## ✅ Design Token Validation Complete" >> $GITHUB_STEP_SUMMARY
+          echo "All design token validations have passed successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### What was validated:" >> $GITHUB_STEP_SUMMARY
+          echo "- Token structure and syntax" >> $GITHUB_STEP_SUMMARY
+          echo "- CSS custom properties generation" >> $GITHUB_STEP_SUMMARY
+          echo "- TypeScript type definitions" >> $GITHUB_STEP_SUMMARY
+          echo "- Tailwind configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- Analytics data collection" >> $GITHUB_STEP_SUMMARY
+      
+      - name: 📝 No token changes detected
+        if: steps.changed-files.outputs.any_changed != 'true'
+        run: |
+          echo "## ℹ️ No Token Changes" >> $GITHUB_STEP_SUMMARY
+          echo "No design token files were modified in this change." >> $GITHUB_STEP_SUMMARY 
