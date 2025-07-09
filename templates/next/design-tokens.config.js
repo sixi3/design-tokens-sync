@@ -13,7 +13,9 @@ export default {
     css: 'styles/tokens.css',
     typescript: 'types/tokens.d.ts',
     tailwind: 'tailwind.config.js',
-    scss: 'styles/_tokens.scss'
+    scss: 'styles/_tokens.scss',
+    json: 'data/tokens.json',
+    javascript: 'data/tokens.js'
   },
   nextjs: {
     // Next.js specific configuration

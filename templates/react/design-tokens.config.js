@@ -12,7 +12,10 @@ export default {
   output: {
     css: 'src/styles/tokens.css',
     typescript: 'src/types/tokens.d.ts',
-    tailwind: 'tailwind.config.js'
+    tailwind: 'tailwind.config.js',
+    scss: 'src/styles/_tokens.scss',
+    json: 'src/data/tokens.json',
+    javascript: 'src/data/tokens.js'
   },
   react: {
     // React-specific token generation

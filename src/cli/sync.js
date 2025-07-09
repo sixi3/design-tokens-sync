@@ -25,7 +25,27 @@ export async function sync(options) {
       
       console.log(chalk.green('\n✨ Sync Summary:'));
       console.log('  • Tokens processed and validated');
-      console.log('  • Output files generated');
+      
+      // Show which formats were generated
+      const config = await processor.config || processor.getConfig();
+      const generatedFormats = [];
+      
+      if (config.output.css) generatedFormats.push('🎨 CSS Custom Properties');
+      if (config.output.tailwind) generatedFormats.push('🌊 Tailwind Config');
+      if (config.output.typescript) generatedFormats.push('📝 TypeScript Definitions');
+      if (config.output.scss) generatedFormats.push('💎 SCSS Variables');
+      if (config.output.json) generatedFormats.push('📄 JSON Export');
+      if (config.output.javascript) generatedFormats.push('⚡ JavaScript/ES Modules');
+      if (config.output.ios) generatedFormats.push('📱 iOS Swift');
+      if (config.output.android) generatedFormats.push('🤖 Android XML');
+      if (config.output.xamarin) generatedFormats.push('🔷 Xamarin XAML');
+      
+      if (generatedFormats.length > 0) {
+        console.log('  • Generated formats:');
+        generatedFormats.forEach(format => {
+          console.log(`    - ${format}`);
+        });
+      }
       
       if (!options.noGit) {
         console.log('  • Git operations completed');

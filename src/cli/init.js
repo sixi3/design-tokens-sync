@@ -44,23 +44,62 @@ export async function init(options) {
       ]
     },
     {
-      type: 'confirm',
-      name: 'useTailwind',
-      message: 'Are you using Tailwind CSS?',
-      default: true
-    },
-    {
-      type: 'confirm',
-      name: 'useTypeScript',
-      message: 'Are you using TypeScript?',
-      default: true
-    },
-    {
-      type: 'confirm',
-      name: 'useSCSS',
-      message: 'Do you want SCSS variable generation?',
-      default: false,
-      when: (answers) => !answers.useTailwind
+      type: 'checkbox',
+      name: 'outputFormats',
+      message: 'Which output formats would you like to generate?',
+      choices: [
+        {
+          name: '🎨 CSS Custom Properties - For modern web applications',
+          value: 'css',
+          checked: true
+        },
+        {
+          name: '🌊 Tailwind Config - For Tailwind CSS projects',
+          value: 'tailwind',
+          checked: true
+        },
+        {
+          name: '📝 TypeScript Definitions - For type-safe development',
+          value: 'typescript',
+          checked: true
+        },
+        {
+          name: '💎 SCSS Variables - For Sass/SCSS projects',
+          value: 'scss',
+          checked: false
+        },
+        {
+          name: '📄 JSON Export - For data exchange and APIs',
+          value: 'json',
+          checked: false
+        },
+        {
+          name: '⚡ JavaScript/ES Modules - For direct JS imports',
+          value: 'javascript',
+          checked: false
+        },
+        {
+          name: '📱 iOS Swift - For iOS app development',
+          value: 'ios',
+          checked: false
+        },
+        {
+          name: '🤖 Android XML - For Android app development',
+          value: 'android',
+          checked: false
+        },
+        {
+          name: '🔷 Xamarin XAML - For cross-platform .NET apps',
+          value: 'xamarin',
+          checked: false
+        }
+      ],
+      validate: (answers) => {
+        if (answers.length === 0) {
+          return 'Please select at least one output format';
+        }
+        return true;
+      }
     },
     {
       type: 'confirm',
@@ -167,13 +206,23 @@ export async function init(options) {
     console.log('  • Config: ' + chalk.dim('design-tokens.config.js'));
     console.log('  • Tokens: ' + chalk.dim('tokens.json'));
     
-    if (answers.useTailwind) {
-      console.log('  • Tailwind: ' + chalk.dim('tailwind.config.js (will be updated)'));
-    }
-    
-    if (answers.useTypeScript) {
-      const typesPath = answers.framework === 'universal' ? 'tokens.d.ts' : 'src/types/tokens.d.ts';
-      console.log('  • Types: ' + chalk.dim(`${typesPath} (will be generated)`));
+    // Show selected output formats
+    if (answers.outputFormats.length > 0) {
+      console.log('\n🎯 Output formats that will be generated:');
+      answers.outputFormats.forEach(format => {
+        const formatInfo = {
+          css: '🎨 CSS Custom Properties',
+          tailwind: '🌊 Tailwind Config',
+          typescript: '📝 TypeScript Definitions',
+          scss: '💎 SCSS Variables',
+          json: '📄 JSON Export',
+          javascript: '⚡ JavaScript/ES Modules',
+          ios: '📱 iOS Swift',
+          android: '🤖 Android XML',
+          xamarin: '🔷 Xamarin XAML'
+        };
+        console.log(`  • ${formatInfo[format]}`);
+      });
     }
     
     console.log('\n📖 Documentation: https://github.com/sixi3/figma-code-sync#readme');
@@ -233,16 +282,36 @@ async function createConfigFile(answers) {
     };
     
     // Add optional outputs based on user preferences
-    if (answers.useTailwind) {
+    if (answers.outputFormats.includes('tailwind')) {
       config.output.tailwind = 'tailwind.config.js';
     }
     
-    if (answers.useTypeScript) {
+    if (answers.outputFormats.includes('typescript')) {
       config.output.typescript = 'tokens.d.ts';
     }
     
-    if (answers.useSCSS) {
+    if (answers.outputFormats.includes('scss')) {
       config.output.scss = 'tokens.scss';
+    }
+
+    if (answers.outputFormats.includes('json')) {
+      config.output.json = 'tokens.json';
+    }
+
+    if (answers.outputFormats.includes('javascript')) {
+      config.output.javascript = 'tokens.js';
+    }
+
+    if (answers.outputFormats.includes('ios')) {
+      config.output.ios = 'ios/Colors.swift';
+    }
+
+    if (answers.outputFormats.includes('android')) {
+      config.output.android = 'android/colors.xml';
+    }
+
+    if (answers.outputFormats.includes('xamarin')) {
+      config.output.xamarin = 'xamarin/Colors.xaml';
     }
     
     const configContent = `// Universal Design Tokens Configuration
@@ -274,17 +343,37 @@ export default ${JSON.stringify(config, null, 2)};
     // Copy framework-specific config and customize
     let configContent = await fs.readFile(frameworkConfigPath, 'utf8');
     
-    // Customize based on user answers
-    if (!answers.useTailwind) {
+    // Customize based on user answers - remove formats not selected
+    if (!answers.outputFormats.includes('tailwind')) {
       configContent = configContent.replace(/tailwind: '.*?',?\n?/g, '');
     }
     
-    if (!answers.useTypeScript) {
+    if (!answers.outputFormats.includes('typescript')) {
       configContent = configContent.replace(/typescript: '.*?',?\n?/g, '');
     }
     
-    if (!answers.useSCSS) {
+    if (!answers.outputFormats.includes('scss')) {
       configContent = configContent.replace(/scss: '.*?',?\n?/g, '');
+    }
+
+    if (!answers.outputFormats.includes('json')) {
+      configContent = configContent.replace(/json: '.*?',?\n?/g, '');
+    }
+
+    if (!answers.outputFormats.includes('javascript')) {
+      configContent = configContent.replace(/javascript: '.*?',?\n?/g, '');
+    }
+
+    if (!answers.outputFormats.includes('ios')) {
+      configContent = configContent.replace(/ios: '.*?',?\n?/g, '');
+    }
+
+    if (!answers.outputFormats.includes('android')) {
+      configContent = configContent.replace(/android: '.*?',?\n?/g, '');
+    }
+
+    if (!answers.outputFormats.includes('xamarin')) {
+      configContent = configContent.replace(/xamarin: '.*?',?\n?/g, '');
     }
     
     // Update git and analytics settings
@@ -321,16 +410,36 @@ export default ${JSON.stringify(config, null, 2)};
       }
     };
     
-    if (answers.useTailwind) {
+    if (answers.outputFormats.includes('tailwind')) {
       config.output.tailwind = 'tailwind.config.js';
     }
     
-    if (answers.useTypeScript) {
+    if (answers.outputFormats.includes('typescript')) {
       config.output.typescript = getOutputPath(answers.framework, 'types');
     }
     
-    if (answers.useSCSS) {
+    if (answers.outputFormats.includes('scss')) {
       config.output.scss = getOutputPath(answers.framework, 'scss');
+    }
+
+    if (answers.outputFormats.includes('json')) {
+      config.output.json = getOutputPath(answers.framework, 'json');
+    }
+
+    if (answers.outputFormats.includes('javascript')) {
+      config.output.javascript = getOutputPath(answers.framework, 'javascript');
+    }
+
+    if (answers.outputFormats.includes('ios')) {
+      config.output.ios = getOutputPath(answers.framework, 'ios');
+    }
+
+    if (answers.outputFormats.includes('android')) {
+      config.output.android = getOutputPath(answers.framework, 'android');
+    }
+
+    if (answers.outputFormats.includes('xamarin')) {
+      config.output.xamarin = getOutputPath(answers.framework, 'xamarin');
     }
     
     const configContent = `// Design Tokens Configuration
@@ -348,42 +457,82 @@ function getOutputPath(framework, type) {
     react: {
       css: 'src/styles/tokens.css',
       types: 'src/types/tokens.d.ts',
-      scss: 'src/styles/_tokens.scss'
+      scss: 'src/styles/_tokens.scss',
+      json: 'src/data/tokens.json',
+      javascript: 'src/data/tokens.js',
+      ios: 'src/platforms/ios/Colors.swift',
+      android: 'src/platforms/android/colors.xml',
+      xamarin: 'src/platforms/xamarin/Colors.xaml'
     },
     vue: {
       css: 'src/styles/tokens.css',
       types: 'src/types/tokens.d.ts',
-      scss: 'src/styles/_tokens.scss'
+      scss: 'src/styles/_tokens.scss',
+      json: 'src/data/tokens.json',
+      javascript: 'src/data/tokens.js',
+      ios: 'src/platforms/ios/Colors.swift',
+      android: 'src/platforms/android/colors.xml',
+      xamarin: 'src/platforms/xamarin/Colors.xaml'
     },
     next: {
       css: 'styles/tokens.css',
       types: 'types/tokens.d.ts',
-      scss: 'styles/_tokens.scss'
+      scss: 'styles/_tokens.scss',
+      json: 'data/tokens.json',
+      javascript: 'data/tokens.js',
+      ios: 'platforms/ios/Colors.swift',
+      android: 'platforms/android/colors.xml',
+      xamarin: 'platforms/xamarin/Colors.xaml'
     },
     nuxt: {
       css: 'assets/css/tokens.css',
       types: 'types/tokens.d.ts',
-      scss: 'assets/scss/_tokens.scss'
+      scss: 'assets/scss/_tokens.scss',
+      json: 'assets/data/tokens.json',
+      javascript: 'assets/data/tokens.js',
+      ios: 'platforms/ios/Colors.swift',
+      android: 'platforms/android/colors.xml',
+      xamarin: 'platforms/xamarin/Colors.xaml'
     },
     svelte: {
       css: 'src/styles/tokens.css',
       types: 'src/types/tokens.d.ts',
-      scss: 'src/styles/_tokens.scss'
+      scss: 'src/styles/_tokens.scss',
+      json: 'src/data/tokens.json',
+      javascript: 'src/data/tokens.js',
+      ios: 'src/platforms/ios/Colors.swift',
+      android: 'src/platforms/android/colors.xml',
+      xamarin: 'src/platforms/xamarin/Colors.xaml'
     },
     angular: {
       css: 'src/styles/tokens.css',
       types: 'src/types/tokens.d.ts',
-      scss: 'src/styles/_tokens.scss'
+      scss: 'src/styles/_tokens.scss',
+      json: 'src/data/tokens.json',
+      javascript: 'src/data/tokens.js',
+      ios: 'src/platforms/ios/Colors.swift',
+      android: 'src/platforms/android/colors.xml',
+      xamarin: 'src/platforms/xamarin/Colors.xaml'
     },
     vanilla: {
       css: 'css/tokens.css',
       types: 'types/tokens.d.ts',
-      scss: 'scss/_tokens.scss'
+      scss: 'scss/_tokens.scss',
+      json: 'data/tokens.json',
+      javascript: 'data/tokens.js',
+      ios: 'platforms/ios/Colors.swift',
+      android: 'platforms/android/colors.xml',
+      xamarin: 'platforms/xamarin/Colors.xaml'
     },
     universal: {
       css: 'tokens.css',
       types: 'tokens.d.ts',
-      scss: 'tokens.scss'
+      scss: 'tokens.scss',
+      json: 'tokens.json',
+      javascript: 'tokens.js',
+      ios: 'ios/Colors.swift',
+      android: 'android/colors.xml',
+      xamarin: 'xamarin/Colors.xaml'
     }
   };
   
@@ -419,30 +568,45 @@ async function createTokensFile(framework = 'react') {
 async function createDirectories(answers) {
   const dirs = [];
   
-  // Framework-specific directories
+  // Framework-specific directories based on selected output formats
   switch (answers.framework) {
     case 'universal':
-      // For universal, create minimal directories - files will be in root
-      // Only create directories if user wants TypeScript or SCSS
-      if (answers.useTypeScript) dirs.push('types');
-      if (answers.useSCSS) dirs.push('scss');
+      // For universal, create directories based on selected formats
+      if (answers.outputFormats.includes('ios')) dirs.push('ios');
+      if (answers.outputFormats.includes('android')) dirs.push('android');
+      if (answers.outputFormats.includes('xamarin')) dirs.push('xamarin');
       break;
     case 'next':
-      dirs.push('styles', 'types');
+      dirs.push('styles');
+      if (answers.outputFormats.includes('typescript')) dirs.push('types');
+      if (answers.outputFormats.includes('json') || answers.outputFormats.includes('javascript')) dirs.push('data');
+      if (answers.outputFormats.includes('ios') || answers.outputFormats.includes('android') || answers.outputFormats.includes('xamarin')) dirs.push('platforms');
       break;
     case 'nuxt':
-      dirs.push('assets/css', 'types');
-      if (answers.useSCSS) dirs.push('assets/scss');
+      dirs.push('assets/css');
+      if (answers.outputFormats.includes('typescript')) dirs.push('types');
+      if (answers.outputFormats.includes('scss')) dirs.push('assets/scss');
+      if (answers.outputFormats.includes('json') || answers.outputFormats.includes('javascript')) dirs.push('assets/data');
+      if (answers.outputFormats.includes('ios') || answers.outputFormats.includes('android') || answers.outputFormats.includes('xamarin')) dirs.push('platforms');
       break;
     case 'angular':
-      dirs.push('src/styles', 'src/types');
+      dirs.push('src/styles');
+      if (answers.outputFormats.includes('typescript')) dirs.push('src/types');
+      if (answers.outputFormats.includes('json') || answers.outputFormats.includes('javascript')) dirs.push('src/data');
+      if (answers.outputFormats.includes('ios') || answers.outputFormats.includes('android') || answers.outputFormats.includes('xamarin')) dirs.push('src/platforms');
       break;
     case 'vanilla':
-      dirs.push('css', 'types');
-      if (answers.useSCSS) dirs.push('scss');
+      dirs.push('css');
+      if (answers.outputFormats.includes('typescript')) dirs.push('types');
+      if (answers.outputFormats.includes('scss')) dirs.push('scss');
+      if (answers.outputFormats.includes('json') || answers.outputFormats.includes('javascript')) dirs.push('data');
+      if (answers.outputFormats.includes('ios') || answers.outputFormats.includes('android') || answers.outputFormats.includes('xamarin')) dirs.push('platforms');
       break;
     default:
-      dirs.push('src/styles', 'src/types');
+      dirs.push('src/styles');
+      if (answers.outputFormats.includes('typescript')) dirs.push('src/types');
+      if (answers.outputFormats.includes('json') || answers.outputFormats.includes('javascript')) dirs.push('src/data');
+      if (answers.outputFormats.includes('ios') || answers.outputFormats.includes('android') || answers.outputFormats.includes('xamarin')) dirs.push('src/platforms');
   }
   
   for (const dir of dirs) {
