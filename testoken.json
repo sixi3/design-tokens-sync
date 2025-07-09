@@ -1,0 +1,518 @@
+{
+    "color": {
+      "identisafe": {
+        "identisafe-lighter": {
+          "value": "#00ff5c",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "identisafe-light": {
+          "value": "#00e352",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "identisafe": {
+          "value": "#00b140",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "identisafe-dark": {
+          "value": "#7d6e00",
+          "type": "color",
+          "parent": "brand/brand"
+        },
+        "identisafe-darker": {
+          "value": "#004a1b",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        }
+      },
+      "red": {
+        "red": {
+          "value": "#ef5350",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "red-light": {
+          "value": "#ef9897",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "red-dark": {
+          "value": "#bd423f",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        }
+      },
+      "yellow": {
+        "yellow": {
+          "value": "#ffbf00",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "yellow-light": {
+          "value": "#ffe699",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "yellow-dark": {
+          "value": "#cc9900",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        }
+      },
+      "green": {
+        "green": {
+          "value": "#419645",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "green-light": {
+          "value": "#62e368",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "green-dark": {
+          "value": "#2b632e",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        }
+      },
+      "blue": {
+        "blue": {
+          "value": "#2196f3",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "blue-light": {
+          "value": "#6ec6ff",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "blue-dark": {
+          "value": "#0069c0",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        }
+      },
+      "grey": {
+        "grey-0": {
+          "value": "#000000",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "grey-10": {
+          "value": "#212121",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "grey-20": {
+          "value": "#303030",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "grey-30": {
+          "value": "#424242",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "grey-40": {
+          "value": "#616161",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "grey-50": {
+          "value": "#757575",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "grey-60": {
+          "value": "#9e9e9e",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "grey-70": {
+          "value": "#bdbdbd",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "grey-80": {
+          "value": "#e0e0e0",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "grey-90": {
+          "value": "#f5f5f5",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "grey-100": {
+          "value": "#ffffff",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        }
+      },
+      "neon": {
+        "neon": {
+          "value": "#baff29",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "neon-light": {
+          "value": "#ebffc2",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "neon-dark": {
+          "value": "#82b21d",
+          "type": "color",
+          "parent": "brand/brand",
+          "description": ""
+        }
+      }
+    },
+    "text": {
+      "font family": {
+        "font-family-1": {
+          "value": "Noto Sans",
+          "type": "text",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-family-2": {
+          "value": "Apfel Grotesk",
+          "type": "text",
+          "parent": "brand/brand",
+          "description": ""
+        }
+      },
+      "font-size": {
+        "font-size-100-10": {
+          "value": "0.625rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-size-200-12": {
+          "value": "0.75rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-size-300-14": {
+          "value": "0.875rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-size-400-16": {
+          "value": "1rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-size-500-20": {
+          "value": "1.25rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-size-600-24": {
+          "value": "1.5rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-size-700-32": {
+          "value": "2rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-size-800-40": {
+          "value": "2.5rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-size-900-48": {
+          "value": "3rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-size-1000-60": {
+          "value": "3.75rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        }
+      },
+      "font weight": {
+        "font-weight-regular": {
+          "value": "25rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-weight-medium": {
+          "value": "31.25rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-weight-semibold": {
+          "value": "37.5rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-weight-bold": {
+          "value": "43.75rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        }
+      },
+      "font line height": {
+        "font-line-height-800": {
+          "value": "3rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-line-height-700": {
+          "value": "2.5rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-line-height-600": {
+          "value": "2rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-line-height-500": {
+          "value": "1.5rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-line-height-400": {
+          "value": "1.25rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-line-height-300": {
+          "value": "1rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-line-height-200": {
+          "value": "0.875rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        },
+        "font-line-height-100": {
+          "value": "0.75rem",
+          "type": "dimension",
+          "parent": "brand/brand",
+          "description": ""
+        }
+      }
+    },
+    "spacing": {
+      "100": {
+        "value": "0.125rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      },
+      "200": {
+        "value": "0.25rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      },
+      "300": {
+        "value": "0.5rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      },
+      "400": {
+        "value": "0.75rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      },
+      "500": {
+        "value": "1rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": "",
+        "oldValue": "1rem"
+      },
+      "600": {
+        "value": "1.5rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      },
+      "700": {
+        "value": "2rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      },
+      "800": {
+        "value": "3rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      },
+      "900": {
+        "value": "4rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      },
+      "1000": {
+        "value": "8rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      }
+    },
+    "radius": {
+      "none": {
+        "value": "0rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      },
+      "xs": {
+        "value": "0.25rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": "",
+        "oldValue": "0.125rem"
+      },
+      "sm": {
+        "value": "0.5rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": "",
+        "oldValue": "0.25rem"
+      },
+      "md": {
+        "value": "1.5rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": "",
+        "oldValue": "0.5rem"
+      },
+      "lg": {
+        "value": "2rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": "",
+        "oldValue": "4rem"
+      },
+      "xxs": {
+        "value": "0.125rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      },
+      "xl": {
+        "value": "4rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      }
+    },
+    "sizing": {
+      "100": {
+        "value": "0.5rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      },
+      "200": {
+        "value": "1rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      },
+      "300": {
+        "value": "1.5rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      },
+      "400": {
+        "value": "2rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      },
+      "500": {
+        "value": "4rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      },
+      "600": {
+        "value": "8rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      },
+      "700": {
+        "value": "16rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      },
+      "800": {
+        "value": "32rem",
+        "type": "dimension",
+        "parent": "brand/brand",
+        "description": ""
+      }
+    }
+  }

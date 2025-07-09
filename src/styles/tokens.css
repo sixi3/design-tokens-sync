@@ -5,56 +5,57 @@
   /* Colors */
 
   /* Spacing */
-  --spacing-0: 0;
-  --spacing-1: 0.25rem;
-  --spacing-2: 0.5rem;
-  --spacing-3: 0.75rem;
-  --spacing-4: 1rem;
-  --spacing-5: 1.25rem;
-  --spacing-6: 1.5rem;
-  --spacing-8: 2rem;
-  --spacing-10: 2.5rem;
-  --spacing-12: 3rem;
-  --spacing-16: 4rem;
-  --spacing-20: 5rem;
-  --spacing-24: 6rem;
+  --spacing-100: 0.125rem;
+  --spacing-200: 0.25rem;
+  --spacing-300: 0.5rem;
+  --spacing-400: 0.75rem;
+  --spacing-500: 1rem;
+  --spacing-600: 1.5rem;
+  --spacing-700: 2rem;
+  --spacing-800: 3rem;
+  --spacing-900: 4rem;
+  --spacing-1000: 8rem;
 
   /* Border Radius */
-  --border-radius-none: 0;
-  --border-radius-sm: 0.125rem;
-  --border-radius-base: 0.25rem;
-  --border-radius-md: 0.375rem;
-  --border-radius-lg: 0.5rem;
-  --border-radius-xl: 0.75rem;
-  --border-radius-2xl: 1rem;
-  --border-radius-full: 9999px;
+  --border-radius-none: 0rem;
+  --border-radius-xs: 0.25rem;
+  --border-radius-sm: 0.5rem;
+  --border-radius-md: 1.5rem;
+  --border-radius-lg: 2rem;
+  --border-radius-xxs: 0.125rem;
+  --border-radius-xl: 4rem;
 
   /* Typography */
-  --typography-fontFamily-sans: Inter,system-ui,sans-serif;
-  --typography-fontFamily-mono: Fira Code,Monaco,Consolas,monospace;
-  --typography-fontSize-xs: 0.75rem;
-  --typography-fontSize-sm: 0.875rem;
-  --typography-fontSize-base: 1rem;
-  --typography-fontSize-lg: 1.125rem;
-  --typography-fontSize-xl: 1.25rem;
-  --typography-fontSize-2xl: 1.5rem;
-  --typography-fontSize-3xl: 1.875rem;
-  --typography-fontSize-4xl: 2.25rem;
-  --typography-fontSize-5xl: 3rem;
-  --typography-fontWeight-normal: 400;
-  --typography-fontWeight-medium: 500;
-  --typography-fontWeight-semibold: 600;
-  --typography-fontWeight-bold: 700;
-  --typography-lineHeight-tight: 1.25;
-  --typography-lineHeight-normal: 1.5;
-  --typography-lineHeight-relaxed: 1.75;
+  --typography-fontFamily-font-family-1: Noto Sans;
+  --typography-fontFamily-font-family-2: Apfel Grotesk;
+  --typography-fontSize-font-size-100-10: 0.625rem;
+  --typography-fontSize-font-size-200-12: 0.75rem;
+  --typography-fontSize-font-size-300-14: 0.875rem;
+  --typography-fontSize-font-size-400-16: 1rem;
+  --typography-fontSize-font-size-500-20: 1.25rem;
+  --typography-fontSize-font-size-600-24: 1.5rem;
+  --typography-fontSize-font-size-700-32: 2rem;
+  --typography-fontSize-font-size-800-40: 2.5rem;
+  --typography-fontSize-font-size-900-48: 3rem;
+  --typography-fontSize-font-size-1000-60: 3.75rem;
+  --typography-fontWeight-font-weight-regular: 25rem;
+  --typography-fontWeight-font-weight-medium: 31.25rem;
+  --typography-fontWeight-font-weight-semibold: 37.5rem;
+  --typography-fontWeight-font-weight-bold: 43.75rem;
+  --typography-lineHeight-font-line-height-800: 3rem;
+  --typography-lineHeight-font-line-height-700: 2.5rem;
+  --typography-lineHeight-font-line-height-600: 2rem;
+  --typography-lineHeight-font-line-height-500: 1.5rem;
+  --typography-lineHeight-font-line-height-400: 1.25rem;
+  --typography-lineHeight-font-line-height-300: 1rem;
+  --typography-lineHeight-font-line-height-200: 0.875rem;
+  --typography-lineHeight-font-line-height-100: 0.75rem;
 
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-base: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
 
   /* Opacity */
   --opacity-0: 0;
