@@ -69,8 +69,12 @@ export class TokenValidator {
       tokens.semantic || 
       tokens.$themes || 
       tokens.$metadata ||
-      // Also detect direct Token Studio format with root-level categories
-      (tokens.color || tokens.text || tokens.spacing || tokens.radius || tokens.sizing)
+      // Also detect direct Token Studio format with root-level categories (singular naming convention)
+      (tokens.color && !tokens.colors) ||
+      // Specific Token Studio format detection: has 'text' but not 'colors' (which indicates standard format)
+      (tokens.text && !tokens.colors) ||
+      tokens.radius || 
+      tokens.sizing
     );
   }
 
@@ -102,6 +106,10 @@ export class TokenValidator {
     // Handle direct Token Studio format with root-level categories
     if (tokens.color) {
       extracted.colors = tokens.color;
+    }
+    // Handle case where tokens already use 'colors' (plural) instead of 'color' (singular)
+    if (tokens.colors && !extracted.colors) {
+      extracted.colors = tokens.colors;
     }
     if (tokens.text) {
       extracted.typography = tokens.text;
