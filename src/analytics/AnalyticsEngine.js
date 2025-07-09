@@ -5,15 +5,25 @@ import { glob } from 'glob';
 export class AnalyticsEngine {
   constructor(config = {}) {
     this.config = {
-      scanDirs: config.scanDirs || ['src/**/*', 'components/**/*', 'pages/**/*'],
-      fileExtensions: config.fileExtensions || ['.js', '.jsx', '.ts', '.tsx', '.vue', '.svelte', '.css', '.scss'],
+      scanDirs: config.scanDirs || ['src/**/*', 'components/**/*', 'pages/**/*', 'android/**/*', 'ios/**/*', 'lib/**/*'],
+      fileExtensions: config.fileExtensions || [
+        '.js', '.jsx', '.ts', '.tsx', '.vue', '.svelte', '.css', '.scss',
+        // Mobile formats
+        '.swift',           // iOS
+        '.kt', '.java',     // Android
+        '.dart',            // Flutter
+        '.xml',             // Android layouts
+        '.json'             // Config files that might reference tokens
+      ],
       outputDir: config.outputDir || '.tokens-analytics',
-      excludePatterns: config.excludePatterns || ['node_modules', '.git', 'dist', 'build'],
+      excludePatterns: config.excludePatterns || ['node_modules', '.git', 'dist', 'build', '*.xcworkspace', '*.xcodeproj'],
+      debug: config.debug || false,
       ...config
     };
     
     this.tokenUsageData = {};
     this.componentData = {};
+    this.availableTokens = new Set();
     this.stats = {
       filesScanned: 0,
       tokensFound: 0,
@@ -22,12 +32,58 @@ export class AnalyticsEngine {
     };
   }
 
+  async loadAvailableTokens() {
+    try {
+      // Try to find tokens.json or design-tokens config
+      const possibleTokenFiles = ['tokens.json', 'design-tokens.json', 'tokens/index.json'];
+      
+      for (const tokenFile of possibleTokenFiles) {
+        try {
+          const tokenData = await fs.readJSON(tokenFile);
+          this.extractTokenNames(tokenData);
+          if (this.config.debug) {
+            console.log(`Debug: Loaded ${this.availableTokens.size} tokens from ${tokenFile}`);
+          }
+          break;
+        } catch (error) {
+          // Continue to next file
+        }
+      }
+    } catch (error) {
+      if (this.config.debug) {
+        console.log('Debug: Could not load token definitions');
+      }
+    }
+  }
+
+  extractTokenNames(obj, prefix = '') {
+    for (const [key, value] of Object.entries(obj)) {
+      const tokenName = prefix ? `${prefix}-${key}` : key;
+      
+      if (typeof value === 'object' && value !== null && !value.hasOwnProperty('value')) {
+        // Recursive object, go deeper
+        this.extractTokenNames(value, tokenName);
+      } else {
+        // This is a token
+        this.availableTokens.add(tokenName);
+      }
+    }
+  }
+
   async collectUsageData() {
     console.log('🔍 Scanning project for token usage...');
+    
+    // Load available tokens for better matching
+    await this.loadAvailableTokens();
     
     // Get all files to scan
     const files = await this.getFilesToScan();
     this.stats.filesScanned = files.length;
+    
+    if (this.config.debug) {
+      console.log(`Debug: Found ${files.length} files to scan:`);
+      files.forEach(file => console.log(`  - ${file}`));
+    }
     
     for (const file of files) {
       await this.analyzeFile(file);
@@ -83,6 +139,22 @@ export class AnalyticsEngine {
         case '.svelte':
           this.analyzeSvelteFile(filePath, content);
           break;
+        case '.swift':
+          this.analyzeSwiftFile(filePath, content);
+          break;
+        case '.kt':
+        case '.java':
+          this.analyzeKotlinJavaFile(filePath, content);
+          break;
+        case '.dart':
+          this.analyzeDartFile(filePath, content);
+          break;
+        case '.xml':
+          this.analyzeXMLFile(filePath, content);
+          break;
+        case '.json':
+          this.analyzeJSONFile(filePath, content);
+          break;
       }
     } catch (error) {
       console.warn(`Warning: Could not analyze ${filePath}: ${error.message}`);
@@ -94,9 +166,28 @@ export class AnalyticsEngine {
     const customPropRegex = /var\(--([^)]+)\)/g;
     const matches = [...content.matchAll(customPropRegex)];
     
+    // Debug logging
+    if (this.config.debug) {
+      console.log(`Analyzing CSS file: ${filePath}`);
+      console.log(`Found ${matches.length} CSS custom property matches`);
+    }
+    
     matches.forEach(match => {
       const tokenName = match[1];
       this.recordTokenUsage(tokenName, filePath, 'css-variable');
+    });
+
+    // Find CSS custom property definitions (root declarations)
+    const customPropDefRegex = /--([a-zA-Z0-9-_]+)\s*:\s*([^;]+);/g;
+    const defMatches = [...content.matchAll(customPropDefRegex)];
+    
+    if (this.config.debug) {
+      console.log(`Found ${defMatches.length} CSS custom property definitions`);
+    }
+    
+    defMatches.forEach(match => {
+      const tokenName = match[1];
+      this.recordTokenUsage(tokenName, filePath, 'css-definition');
     });
 
     // Find Tailwind classes
@@ -110,6 +201,17 @@ export class AnalyticsEngine {
           this.recordTokenUsage(className, filePath, 'tailwind-class');
         }
       });
+    });
+
+    // Find component classes that might be token-based
+    const componentClassRegex = /\.([\w-]+)\s*\{/g;
+    const componentMatches = [...content.matchAll(componentClassRegex)];
+    
+    componentMatches.forEach(match => {
+      const className = match[1];
+      if (this.isTokenBasedClass(className)) {
+        this.recordTokenUsage(className, filePath, 'component-class');
+      }
     });
   }
 
@@ -144,6 +246,9 @@ export class AnalyticsEngine {
         }
       });
     });
+
+    // React Native StyleSheet analysis
+    this.analyzeReactNativeStyles(filePath, content);
 
     // Analyze React components
     this.analyzeReactComponent(filePath, content);
@@ -240,6 +345,266 @@ export class AnalyticsEngine {
     ];
     
     return tokenPatterns.some(pattern => pattern.test(className));
+  }
+
+  isTokenBasedClass(className) {
+    // Detect component classes that use design tokens pattern
+    const componentTokenPatterns = [
+      /^btn(--)?\w*$/,          // button variants (btn, btn--primary, etc.)
+      /^card(--)?\w*$/,         // card variants
+      /^text(--)?\w*$/,         // text variants
+      /^bg(--)?\w*$/,           // background variants
+      /^border(--)?\w*$/,       // border variants
+      /^\w+(--)?(sm|md|lg|xl)$/, // size variants
+      /^\w+(--)?primary$/,      // primary variants
+      /^\w+(--)?secondary$/,    // secondary variants
+      /^\w+(--)?ghost$/,        // ghost variants
+    ];
+    
+    return componentTokenPatterns.some(pattern => pattern.test(className));
+  }
+
+  analyzeReactNativeStyles(filePath, content) {
+    // Find StyleSheet.create usage
+    const styleSheetRegex = /StyleSheet\.create\s*\(\s*\{([\s\S]*?)\}\s*\)/g;
+    const styleSheetMatches = [...content.matchAll(styleSheetRegex)];
+    
+    styleSheetMatches.forEach(match => {
+      const stylesContent = match[1];
+      
+      // Find token references in React Native styles
+      const tokenRefRegex = /['"']([a-zA-Z0-9._-]*(?:color|Color|size|Size|spacing|Spacing|font|Font|radius|Radius|shadow|Shadow)[a-zA-Z0-9._-]*)['"]/g;
+      const tokenMatches = [...stylesContent.matchAll(tokenRefRegex)];
+      
+      tokenMatches.forEach(tokenMatch => {
+        const tokenName = tokenMatch[1];
+        if (this.isLikelyToken(tokenName)) {
+          this.recordTokenUsage(tokenName, filePath, 'react-native-stylesheet');
+        }
+      });
+    });
+
+    // Find direct style object token usage
+    const inlineStyleRegex = /style\s*=\s*\{[^}]*([a-zA-Z0-9._-]*(?:color|Color|size|Size|spacing|Spacing|font|Font|radius|Radius|shadow|Shadow)[a-zA-Z0-9._-]*)[^}]*\}/g;
+    const inlineMatches = [...content.matchAll(inlineStyleRegex)];
+    
+    inlineMatches.forEach(match => {
+      const tokenName = match[1];
+      if (this.isLikelyToken(tokenName)) {
+        this.recordTokenUsage(tokenName, filePath, 'react-native-inline');
+      }
+    });
+  }
+
+  analyzeSwiftFile(filePath, content) {
+    if (this.config.debug) {
+      console.log(`Analyzing Swift file: ${filePath}`);
+    }
+
+    // Find UIColor references that might be tokens
+    const colorRegex = /UIColor\.[a-zA-Z0-9_]+|Color\.[a-zA-Z0-9_]+/g;
+    const colorMatches = [...content.matchAll(colorRegex)];
+    
+    colorMatches.forEach(match => {
+      const colorRef = match[0];
+      this.recordTokenUsage(colorRef, filePath, 'swift-color');
+    });
+
+    // Find design token references in Swift (common patterns)
+    const tokenRegex = /(?:Design|Token|Theme|Color|Font|Spacing|Size)\.[a-zA-Z0-9_]+/g;
+    const tokenMatches = [...content.matchAll(tokenRegex)];
+    
+    tokenMatches.forEach(match => {
+      const tokenName = match[0];
+      this.recordTokenUsage(tokenName, filePath, 'swift-token');
+    });
+
+    // Find string literal token references
+    const stringTokenRegex = /"([a-zA-Z0-9._-]*(?:color|Color|size|Size|spacing|Spacing|font|Font|radius|Radius|shadow|Shadow)[a-zA-Z0-9._-]*)"/g;
+    const stringMatches = [...content.matchAll(stringTokenRegex)];
+    
+    stringMatches.forEach(match => {
+      const tokenName = match[1];
+      if (this.isLikelyToken(tokenName)) {
+        this.recordTokenUsage(tokenName, filePath, 'swift-string-token');
+      }
+    });
+  }
+
+  analyzeKotlinJavaFile(filePath, content) {
+    if (this.config.debug) {
+      console.log(`Analyzing Kotlin/Java file: ${filePath}`);
+    }
+
+    // Find R.color, R.dimen, R.string references
+    const resourceRegex = /R\.(color|dimen|string|style|drawable)\.[a-zA-Z0-9_]+/g;
+    const resourceMatches = [...content.matchAll(resourceRegex)];
+    
+    resourceMatches.forEach(match => {
+      const resourceRef = match[0];
+      this.recordTokenUsage(resourceRef, filePath, 'android-resource');
+    });
+
+    // Find ContextCompat.getColor and similar
+    const colorUtilRegex = /(?:ContextCompat\.getColor|ContextCompat\.getDrawable|getResources\(\)\.getColor)\([^,)]+,\s*R\.[a-zA-Z0-9_.]+\)/g;
+    const colorUtilMatches = [...content.matchAll(colorUtilRegex)];
+    
+    colorUtilMatches.forEach(match => {
+      const utilRef = match[0];
+      const resourceMatch = utilRef.match(/R\.[a-zA-Z0-9_.]+/);
+      if (resourceMatch) {
+        this.recordTokenUsage(resourceMatch[0], filePath, 'android-color-util');
+      }
+    });
+
+    // Find theme attribute references
+    const themeAttrRegex = /\?attr\/[a-zA-Z0-9_]+/g;
+    const themeMatches = [...content.matchAll(themeAttrRegex)];
+    
+    themeMatches.forEach(match => {
+      const attrRef = match[0];
+      this.recordTokenUsage(attrRef, filePath, 'android-theme-attr');
+    });
+  }
+
+  analyzeDartFile(filePath, content) {
+    if (this.config.debug) {
+      console.log(`Analyzing Dart file: ${filePath}`);
+    }
+
+    // Find Flutter theme references
+    const themeRegex = /Theme\.of\([^)]+\)\.[a-zA-Z0-9_.]+/g;
+    const themeMatches = [...content.matchAll(themeRegex)];
+    
+    themeMatches.forEach(match => {
+      const themeRef = match[0];
+      this.recordTokenUsage(themeRef, filePath, 'flutter-theme');
+    });
+
+    // Find AppColors, AppSizes, AppFonts references (common patterns)
+    const appTokenRegex = /(?:App|Design|Theme)(?:Colors?|Sizes?|Fonts?|Spacing|Radius|Shadow)\.[a-zA-Z0-9_]+/g;
+    const appTokenMatches = [...content.matchAll(appTokenRegex)];
+    
+    appTokenMatches.forEach(match => {
+      const tokenName = match[0];
+      this.recordTokenUsage(tokenName, filePath, 'flutter-app-token');
+    });
+
+    // Find Colors.xxx references
+    const colorRefRegex = /Colors\.[a-zA-Z0-9_]+/g;
+    const colorMatches = [...content.matchAll(colorRefRegex)];
+    
+    colorMatches.forEach(match => {
+      const colorRef = match[0];
+      this.recordTokenUsage(colorRef, filePath, 'flutter-color');
+    });
+  }
+
+  analyzeXMLFile(filePath, content) {
+    if (this.config.debug) {
+      console.log(`Analyzing XML file: ${filePath}`);
+    }
+
+    // Find @color/, @dimen/, @string/, @style/ references
+    const resourceRefRegex = /@(color|dimen|string|style|drawable)\/[a-zA-Z0-9_]+/g;
+    const resourceMatches = [...content.matchAll(resourceRefRegex)];
+    
+    resourceMatches.forEach(match => {
+      const resourceRef = match[0];
+      this.recordTokenUsage(resourceRef, filePath, 'xml-resource-ref');
+    });
+
+    // Find ?attr/ theme attribute references
+    const attrRefRegex = /\?attr\/[a-zA-Z0-9_]+/g;
+    const attrMatches = [...content.matchAll(attrRefRegex)];
+    
+    attrMatches.forEach(match => {
+      const attrRef = match[0];
+      this.recordTokenUsage(attrRef, filePath, 'xml-theme-attr');
+    });
+
+    // Find style parent references
+    const styleParentRegex = /parent="[^"]*"/g;
+    const parentMatches = [...content.matchAll(styleParentRegex)];
+    
+    parentMatches.forEach(match => {
+      const parentRef = match[0];
+      if (parentRef.includes('AppTheme') || parentRef.includes('Theme.')) {
+        this.recordTokenUsage(parentRef, filePath, 'xml-style-parent');
+      }
+    });
+  }
+
+  analyzeJSONFile(filePath, content) {
+    if (this.config.debug) {
+      console.log(`Analyzing JSON file: ${filePath}`);
+    }
+
+    try {
+      const jsonData = JSON.parse(content);
+      
+      // Skip if this is the main tokens.json file (avoid circular counting)
+      if (path.basename(filePath) === 'tokens.json' || path.basename(filePath) === 'design-tokens.json') {
+        return;
+      }
+
+      // Find token references in JSON configuration files
+      this.findTokenReferencesInObject(jsonData, filePath, '');
+      
+    } catch (error) {
+      if (this.config.debug) {
+        console.log(`Could not parse JSON file ${filePath}: ${error.message}`);
+      }
+    }
+  }
+
+  findTokenReferencesInObject(obj, filePath, keyPath) {
+    if (typeof obj !== 'object' || obj === null) {
+      return;
+    }
+
+    Object.entries(obj).forEach(([key, value]) => {
+      const currentPath = keyPath ? `${keyPath}.${key}` : key;
+      
+      if (typeof value === 'string') {
+        // Check if the string looks like a token reference
+        if (this.isLikelyTokenReference(value)) {
+          this.recordTokenUsage(value, filePath, 'json-token-ref');
+        }
+      } else if (typeof value === 'object') {
+        this.findTokenReferencesInObject(value, filePath, currentPath);
+      }
+    });
+  }
+
+  isLikelyToken(tokenName) {
+    // Check if a string looks like a design token
+    const tokenPatterns = [
+      /color/i,
+      /size/i,
+      /spacing/i,
+      /font/i,
+      /radius/i,
+      /shadow/i,
+      /primary|secondary|tertiary/i,
+      /small|medium|large|xl/i,
+      /light|regular|bold/i
+    ];
+    
+    return tokenPatterns.some(pattern => pattern.test(tokenName)) || 
+           this.availableTokens.has(tokenName);
+  }
+
+  isLikelyTokenReference(value) {
+    // Check if a string value looks like a token reference
+    return typeof value === 'string' && (
+      value.startsWith('$') ||           // $primary-color
+      value.startsWith('var(') ||        // var(--primary-color)
+      value.startsWith('{') ||           // {primary.color}
+      value.includes('token') ||         // token reference
+      this.availableTokens.has(value) || // known token
+      this.isLikelyToken(value)          // looks like token
+    );
   }
 
   recordTokenUsage(tokenName, filePath, type) {

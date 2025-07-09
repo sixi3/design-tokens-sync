@@ -43,9 +43,13 @@ async function collectAnalytics(config, options) {
     // Initialize analytics engine with custom config
     const analyticsConfig = {
       scanDirs: options.scanDirs || config.analytics.scanDirs || ['src/**/*'],
-      fileExtensions: options.extensions || config.analytics.fileExtensions || ['.js', '.jsx', '.ts', '.tsx', '.vue', '.svelte', '.css', '.scss'],
+      fileExtensions: options.extensions || config.analytics.fileExtensions || [
+        '.js', '.jsx', '.ts', '.tsx', '.vue', '.svelte', '.css', '.scss',
+        '.swift', '.kt', '.java', '.dart', '.xml', '.json'
+      ],
       outputDir: options.output || config.analytics.outputDir || '.tokens-analytics',
-      excludePatterns: config.analytics.excludePatterns || ['node_modules', '.git', 'dist', 'build']
+      excludePatterns: config.analytics.excludePatterns || ['node_modules', '.git', 'dist', 'build'],
+      debug: options.debug || config.analytics.debug || false
     };
     
     const engine = new AnalyticsEngine(analyticsConfig);
