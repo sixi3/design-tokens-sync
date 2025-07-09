@@ -115,7 +115,8 @@ export class FileGenerator {
       Object.entries(tokens.colors).forEach(([category, shades]) => {
         if (shades && typeof shades === 'object') {
           Object.entries(shades).forEach(([shade, value]) => {
-            cssVars.push(`  --color-${category}-${shade}: ${value};`);
+            const actualValue = this.getTokenValue(value);
+            cssVars.push(`  --color-${category}-${shade}: ${actualValue};`);
           });
         }
       });
@@ -443,7 +444,8 @@ export default ${JSON.stringify(config, null, 2)};
       Object.entries(tokens.colors).forEach(([category, shades]) => {
         if (shades && typeof shades === 'object') {
           Object.entries(shades).forEach(([shade, value]) => {
-            scss.push(`$color-${category}-${shade}: ${value};`);
+            const actualValue = this.getTokenValue(value);
+            scss.push(`$color-${category}-${shade}: ${actualValue};`);
           });
         }
       });
@@ -606,9 +608,16 @@ export default ${JSON.stringify(config, null, 2)};
   }
 
   toCamelCase(str) {
-    return str
+    const result = str
       .replace(/[-_\s]+(.)?/g, (_, c) => c ? c.toUpperCase() : '')
       .replace(/^./, c => c.toLowerCase());
+    
+    // If the result starts with a number, prefix with underscore to make it a valid JS identifier
+    if (/^\d/.test(result)) {
+      return `_${result}`;
+    }
+    
+    return result;
   }
 
   toPascalCase(str) {
@@ -1184,6 +1193,11 @@ export default ${JSON.stringify(config, null, 2)};
     return xaml.join('\n');
   }
 
+  // Helper to quote keys if not valid JS identifiers
+  jsKey(key) {
+    return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key) ? key : `"${key}"`;
+  }
+
   generateReactNativeContent(tokens) {
     const js = [];
     
@@ -1196,18 +1210,18 @@ export default ${JSON.stringify(config, null, 2)};
       js.push('export const colors = {');
       Object.entries(tokens.colors).forEach(([key, value]) => {
         if (typeof value === 'object' && value !== null) {
-          js.push(`  ${this.toCamelCase(key)}: {`);
+          js.push(`  ${this.jsKey(this.toCamelCase(key))}: {`);
           Object.entries(value).forEach(([shade, colorValue]) => {
             const actualValue = this.getTokenValue(colorValue);
             if (typeof actualValue === 'string' && actualValue.startsWith('#')) {
-              js.push(`    ${this.toCamelCase(shade)}: '${actualValue}',`);
+              js.push(`    ${this.jsKey(this.toCamelCase(shade))}: '${actualValue}',`);
             }
           });
           js.push('  },');
         } else {
           const actualValue = this.getTokenValue(value);
           if (typeof actualValue === 'string' && actualValue.startsWith('#')) {
-            js.push(`  ${this.toCamelCase(key)}: '${actualValue}',`);
+            js.push(`  ${this.jsKey(this.toCamelCase(key))}: '${actualValue}',`);
           }
         }
       });
@@ -1222,7 +1236,7 @@ export default ${JSON.stringify(config, null, 2)};
         const actualValue = this.getTokenValue(value);
         if (typeof actualValue === 'string') {
           const numericValue = this.convertToRNPoints(actualValue);
-          js.push(`  ${this.toCamelCase(key)}: ${numericValue},`);
+          js.push(`  ${this.jsKey(this.toCamelCase(key))}: ${numericValue},`);
         }
       });
       js.push('};');
@@ -1237,7 +1251,7 @@ export default ${JSON.stringify(config, null, 2)};
           const actualValue = this.getTokenValue(value);
           if (typeof actualValue === 'string') {
             const numericValue = this.convertToRNPoints(actualValue);
-            js.push(`  ${this.toCamelCase(key)}: ${numericValue},`);
+            js.push(`  ${this.jsKey(this.toCamelCase(key))}: ${numericValue},`);
           }
         });
         js.push('};');
@@ -1251,7 +1265,7 @@ export default ${JSON.stringify(config, null, 2)};
           if (typeof actualValue === 'string') {
             // Extract first font from font stack for React Native
             const fontName = actualValue.split(',')[0].trim().replace(/['"]/g, '');
-            js.push(`  ${this.toCamelCase(key)}: '${fontName}',`);
+            js.push(`  ${this.jsKey(this.toCamelCase(key))}: '${fontName}',`);
           }
         });
         js.push('};');
@@ -1266,7 +1280,7 @@ export default ${JSON.stringify(config, null, 2)};
         const actualValue = this.getTokenValue(value);
         if (typeof actualValue === 'string') {
           const numericValue = this.convertToRNPoints(actualValue);
-          js.push(`  ${this.toCamelCase(key)}: ${numericValue},`);
+          js.push(`  ${this.jsKey(this.toCamelCase(key))}: ${numericValue},`);
         }
       });
       js.push('};');
@@ -1280,7 +1294,7 @@ export default ${JSON.stringify(config, null, 2)};
         const actualValue = this.getTokenValue(value);
         if (typeof actualValue === 'string') {
           const shadowStyle = this.convertToRNShadow(actualValue);
-          js.push(`  ${this.toCamelCase(key)}: ${JSON.stringify(shadowStyle, null, 4).replace(/\n/g, '\n    ')},`);
+          js.push(`  ${this.jsKey(this.toCamelCase(key))}: ${JSON.stringify(shadowStyle, null, 4).replace(/\n/g, '\n    ')},`);
         }
       });
       js.push('};');
