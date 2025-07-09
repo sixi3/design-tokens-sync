@@ -51,6 +51,26 @@ export class FileGenerator {
       results.xamarin = await this.generateXamarin(tokens, config.output.xamarin);
     }
 
+    // Generate React Native
+    if (config.output.reactNative) {
+      results.reactNative = await this.generateReactNative(tokens, config.output.reactNative);
+    }
+
+    // Generate Flutter/Dart
+    if (config.output.flutter) {
+      results.flutter = await this.generateFlutter(tokens, config.output.flutter);
+    }
+
+    // Generate Kotlin Compose
+    if (config.output.kotlinCompose) {
+      results.kotlinCompose = await this.generateKotlinCompose(tokens, config.output.kotlinCompose);
+    }
+
+    // Generate SwiftUI
+    if (config.output.swiftui) {
+      results.swiftui = await this.generateSwiftUI(tokens, config.output.swiftui);
+    }
+
     // Generate JSON output
     if (config.output.json) {
       results.json = await this.generateJSON(tokens, config.output.json);
@@ -525,6 +545,46 @@ export default ${JSON.stringify(config, null, 2)};
     return { path: outputPath, content: xaml };
   }
 
+  async generateReactNative(tokens, outputPath) {
+    // React Native compatible JavaScript/TypeScript
+    const content = this.generateReactNativeContent(tokens);
+    await fs.ensureDir(path.dirname(outputPath));
+    await fs.writeFile(outputPath, content);
+    
+    console.log(`✅ Generated React Native: ${outputPath}`);
+    return { path: outputPath, content };
+  }
+
+  async generateFlutter(tokens, outputPath) {
+    // Flutter/Dart class
+    const content = this.generateFlutterContent(tokens);
+    await fs.ensureDir(path.dirname(outputPath));
+    await fs.writeFile(outputPath, content);
+    
+    console.log(`✅ Generated Flutter/Dart: ${outputPath}`);
+    return { path: outputPath, content };
+  }
+
+  async generateKotlinCompose(tokens, outputPath) {
+    // Kotlin Compose class
+    const content = this.generateKotlinComposeContent(tokens);
+    await fs.ensureDir(path.dirname(outputPath));
+    await fs.writeFile(outputPath, content);
+    
+    console.log(`✅ Generated Kotlin Compose: ${outputPath}`);
+    return { path: outputPath, content };
+  }
+
+  async generateSwiftUI(tokens, outputPath) {
+    // SwiftUI class
+    const content = this.generateSwiftUIContent(tokens);
+    await fs.ensureDir(path.dirname(outputPath));
+    await fs.writeFile(outputPath, content);
+    
+    console.log(`✅ Generated SwiftUI: ${outputPath}`);
+    return { path: outputPath, content };
+  }
+
   /**
    * Utility methods
    */
@@ -557,14 +617,211 @@ export default ${JSON.stringify(config, null, 2)};
       .replace(/^./, c => c.toUpperCase());
   }
 
+  convertToPoints(cssValue) {
+    if (typeof cssValue !== 'string') return '0';
+    
+    // Remove any whitespace
+    const value = cssValue.trim();
+    
+    // Handle numeric values (assume px)
+    if (/^\d+\.?\d*$/.test(value)) {
+      return value;
+    }
+    
+    // Convert common CSS units to points
+    const match = value.match(/^([\d.]+)(px|rem|em|pt)$/);
+    if (match) {
+      const [, num, unit] = match;
+      const numValue = parseFloat(num);
+      
+      switch (unit) {
+        case 'px':
+          return numValue.toString();
+        case 'rem':
+          return (numValue * 16).toString(); // Assuming 1rem = 16px
+        case 'em':
+          return (numValue * 16).toString(); // Assuming 1em = 16px
+        case 'pt':
+          return numValue.toString();
+        default:
+          return numValue.toString();
+      }
+    }
+    
+    return '0';
+  }
+
+  parseCSShadow(shadowValue) {
+    // Parse CSS box-shadow value
+    // Format: offset-x offset-y blur-radius color
+    // Example: "0 2px 4px rgba(0, 0, 0, 0.1)"
+    const parts = shadowValue.trim().split(/\s+/);
+    
+    let x = '0', y = '0', blur = '0', color = '#000000';
+    
+    if (parts.length >= 2) {
+      x = this.convertToPoints(parts[0]);
+      y = this.convertToPoints(parts[1]);
+    }
+    
+    if (parts.length >= 3) {
+      blur = this.convertToPoints(parts[2]);
+    }
+    
+    if (parts.length >= 4) {
+      // Find color part (might have spaces for rgba)
+      const colorPart = parts.slice(3).join(' ');
+      if (colorPart.startsWith('#')) {
+        color = colorPart;
+      } else if (colorPart.includes('rgba')) {
+        // Convert rgba to hex (simplified)
+        color = '#000000'; // Fallback
+      }
+    }
+    
+    return { x, y, blur, color };
+  }
+
+  convertToDp(cssValue) {
+    if (typeof cssValue !== 'string') return '0dp';
+    
+    const value = cssValue.trim();
+    
+    // Handle numeric values (assume px)
+    if (/^\d+\.?\d*$/.test(value)) {
+      return `${value}dp`;
+    }
+    
+    // Convert common CSS units to dp
+    const match = value.match(/^([\d.]+)(px|rem|em|dp)$/);
+    if (match) {
+      const [, num, unit] = match;
+      const numValue = parseFloat(num);
+      
+      switch (unit) {
+        case 'px':
+          return `${numValue}dp`;
+        case 'rem':
+          return `${numValue * 16}dp`; // Assuming 1rem = 16px
+        case 'em':
+          return `${numValue * 16}dp`; // Assuming 1em = 16px
+        case 'dp':
+          return `${numValue}dp`;
+        default:
+          return `${numValue}dp`;
+      }
+    }
+    
+    return '0dp';
+  }
+
+  convertToSp(cssValue) {
+    if (typeof cssValue !== 'string') return '0sp';
+    
+    const value = cssValue.trim();
+    
+    // Handle numeric values (assume px)
+    if (/^\d+\.?\d*$/.test(value)) {
+      return `${value}sp`;
+    }
+    
+    // Convert common CSS units to sp (for text sizes)
+    const match = value.match(/^([\d.]+)(px|rem|em|sp)$/);
+    if (match) {
+      const [, num, unit] = match;
+      const numValue = parseFloat(num);
+      
+      switch (unit) {
+        case 'px':
+          return `${numValue}sp`;
+        case 'rem':
+          return `${numValue * 16}sp`; // Assuming 1rem = 16px
+        case 'em':
+          return `${numValue * 16}sp`; // Assuming 1em = 16px
+        case 'sp':
+          return `${numValue}sp`;
+        default:
+          return `${numValue}sp`;
+      }
+    }
+    
+    return '0sp';
+  }
+
+  convertToRNPoints(cssValue) {
+    if (typeof cssValue !== 'string') return 0;
+    
+    const value = cssValue.trim();
+    
+    // Handle numeric values (assume px)
+    if (/^\d+\.?\d*$/.test(value)) {
+      return parseFloat(value);
+    }
+    
+    // Convert common CSS units to React Native points
+    const match = value.match(/^([\d.]+)(px|rem|em)$/);
+    if (match) {
+      const [, num, unit] = match;
+      const numValue = parseFloat(num);
+      
+      switch (unit) {
+        case 'px':
+          return numValue;
+        case 'rem':
+          return numValue * 16; // Assuming 1rem = 16px
+        case 'em':
+          return numValue * 16; // Assuming 1em = 16px
+        default:
+          return numValue;
+      }
+    }
+    
+    return 0;
+  }
+
+  convertToRNShadow(cssValue) {
+    // Convert CSS box-shadow to React Native shadow style
+    const shadowProps = this.parseCSShadow(cssValue);
+    
+    return {
+      shadowOffset: {
+        width: parseFloat(shadowProps.x),
+        height: parseFloat(shadowProps.y)
+      },
+      shadowRadius: parseFloat(shadowProps.blur),
+      shadowColor: shadowProps.color,
+      shadowOpacity: 1,
+      // Also add elevation for Android
+      elevation: Math.max(2, parseFloat(shadowProps.blur) / 2)
+    };
+  }
+
+  convertToFlutterColor(hexColor) {
+    // Convert hex color to Flutter Color format
+    if (!hexColor.startsWith('#')) return 'Colors.black';
+    
+    const hex = hexColor.replace('#', '');
+    if (hex.length === 6) {
+      return `Color(0xFF${hex.toUpperCase()})`;
+    } else if (hex.length === 3) {
+      // Expand 3-digit hex to 6-digit
+      const expanded = hex.split('').map(c => c + c).join('');
+      return `Color(0xFF${expanded.toUpperCase()})`;
+    }
+    
+    return 'Colors.black';
+  }
+
   generateSwiftColors(tokens) {
     const swift = [];
-    swift.push('// Design Tokens - Auto-generated Swift Colors');
+    swift.push('// Design Tokens - Auto-generated Swift');
+    swift.push('// Do not edit this file manually');
     swift.push('import UIKit');
     swift.push('');
-    swift.push('extension UIColor {');
     
+    // Colors
     if (tokens.colors) {
+      swift.push('extension UIColor {');
       Object.entries(tokens.colors).forEach(([key, value]) => {
         if (typeof value === 'object' && value !== null) {
           // Nested structure: category -> shade -> value
@@ -585,10 +842,95 @@ export default ${JSON.stringify(config, null, 2)};
           }
         }
       });
+      swift.push('}');
+      swift.push('');
     }
     
-    swift.push('}');
-    swift.push('');
+    // Spacing
+    if (tokens.spacing) {
+      swift.push('struct Spacing {');
+      Object.entries(tokens.spacing).forEach(([key, value]) => {
+        const actualValue = this.getTokenValue(value);
+        if (typeof actualValue === 'string') {
+          const numericValue = this.convertToPoints(actualValue);
+          swift.push(`    static let ${this.toCamelCase(key)}: CGFloat = ${numericValue}`);
+        }
+      });
+      swift.push('}');
+      swift.push('');
+    }
+    
+    // Typography
+    if (tokens.typography) {
+      if (tokens.typography.fontSize) {
+        swift.push('struct FontSize {');
+        Object.entries(tokens.typography.fontSize).forEach(([key, value]) => {
+          const actualValue = this.getTokenValue(value);
+          if (typeof actualValue === 'string') {
+            const numericValue = this.convertToPoints(actualValue);
+            swift.push(`    static let ${this.toCamelCase(key)}: CGFloat = ${numericValue}`);
+          }
+        });
+        swift.push('}');
+        swift.push('');
+      }
+      
+      if (tokens.typography.fontFamily) {
+        swift.push('struct FontFamily {');
+        Object.entries(tokens.typography.fontFamily).forEach(([key, value]) => {
+          const actualValue = this.getTokenValue(value);
+          if (typeof actualValue === 'string') {
+            // Extract first font from font stack for iOS
+            const fontName = actualValue.split(',')[0].trim().replace(/['"]/g, '');
+            swift.push(`    static let ${this.toCamelCase(key)} = "${fontName}"`);
+          }
+        });
+        swift.push('}');
+        swift.push('');
+      }
+    }
+    
+    // Border Radius
+    if (tokens.borderRadius) {
+      swift.push('struct BorderRadius {');
+      Object.entries(tokens.borderRadius).forEach(([key, value]) => {
+        const actualValue = this.getTokenValue(value);
+        if (typeof actualValue === 'string') {
+          const numericValue = this.convertToPoints(actualValue);
+          swift.push(`    static let ${this.toCamelCase(key)}: CGFloat = ${numericValue}`);
+        }
+      });
+      swift.push('}');
+      swift.push('');
+    }
+    
+    // Shadows
+    if (tokens.shadows) {
+      swift.push('struct Shadow {');
+      Object.entries(tokens.shadows).forEach(([key, value]) => {
+        const actualValue = this.getTokenValue(value);
+        if (typeof actualValue === 'string') {
+          // Parse CSS shadow into iOS shadow properties
+          const shadowProps = this.parseCSShadow(actualValue);
+          swift.push(`    static let ${this.toCamelCase(key)} = ShadowStyle(`);
+          swift.push(`        offset: CGSize(width: ${shadowProps.x}, height: ${shadowProps.y}),`);
+          swift.push(`        blur: ${shadowProps.blur},`);
+          swift.push(`        color: UIColor(hex: "${shadowProps.color}")`);
+          swift.push(`    )`);
+        }
+      });
+      swift.push('}');
+      swift.push('');
+      
+      // Add shadow style struct
+      swift.push('struct ShadowStyle {');
+      swift.push('    let offset: CGSize');
+      swift.push('    let blur: CGFloat');
+      swift.push('    let color: UIColor');
+      swift.push('}');
+      swift.push('');
+    }
+    
     swift.push('// UIColor hex initializer extension');
     swift.push('extension UIColor {');
     swift.push('    convenience init(hex: String) {');
@@ -620,10 +962,14 @@ export default ${JSON.stringify(config, null, 2)};
   generateAndroidXML(tokens) {
     const xml = [];
     xml.push('<?xml version="1.0" encoding="utf-8"?>');
-    xml.push('<!-- Design Tokens - Auto-generated Android Colors -->');
+    xml.push('<!-- Design Tokens - Auto-generated Android Resources -->');
+    xml.push('<!-- Do not edit this file manually -->');
     xml.push('<resources>');
+    xml.push('');
     
+    // Colors
     if (tokens.colors) {
+      xml.push('    <!-- Colors -->');
       Object.entries(tokens.colors).forEach(([key, value]) => {
         if (typeof value === 'object' && value !== null) {
           // Nested structure: category -> shade -> value
@@ -643,6 +989,60 @@ export default ${JSON.stringify(config, null, 2)};
           }
         }
       });
+      xml.push('');
+    }
+    
+    // Dimensions (spacing, border radius, font sizes)
+    const dimensionTokens = [];
+    
+    if (tokens.spacing) {
+      Object.entries(tokens.spacing).forEach(([key, value]) => {
+        const actualValue = this.getTokenValue(value);
+        if (typeof actualValue === 'string') {
+          const dpValue = this.convertToDp(actualValue);
+          dimensionTokens.push(`    <dimen name="spacing_${key}">${dpValue}</dimen>`);
+        }
+      });
+    }
+    
+    if (tokens.borderRadius) {
+      Object.entries(tokens.borderRadius).forEach(([key, value]) => {
+        const actualValue = this.getTokenValue(value);
+        if (typeof actualValue === 'string') {
+          const dpValue = this.convertToDp(actualValue);
+          dimensionTokens.push(`    <dimen name="border_radius_${key}">${dpValue}</dimen>`);
+        }
+      });
+    }
+    
+    if (tokens.typography?.fontSize) {
+      Object.entries(tokens.typography.fontSize).forEach(([key, value]) => {
+        const actualValue = this.getTokenValue(value);
+        if (typeof actualValue === 'string') {
+          const spValue = this.convertToSp(actualValue);
+          dimensionTokens.push(`    <dimen name="font_size_${key}">${spValue}</dimen>`);
+        }
+      });
+    }
+    
+    if (dimensionTokens.length > 0) {
+      xml.push('    <!-- Dimensions -->');
+      xml.push(...dimensionTokens);
+      xml.push('');
+    }
+    
+    // Strings (font families)
+    if (tokens.typography?.fontFamily) {
+      xml.push('    <!-- Font Families -->');
+      Object.entries(tokens.typography.fontFamily).forEach(([key, value]) => {
+        const actualValue = this.getTokenValue(value);
+        if (typeof actualValue === 'string') {
+          // Extract first font from font stack for Android
+          const fontName = actualValue.split(',')[0].trim().replace(/['"]/g, '');
+          xml.push(`    <string name="font_family_${key}">${fontName}</string>`);
+        }
+      });
+      xml.push('');
     }
     
     xml.push('</resources>');
@@ -652,11 +1052,13 @@ export default ${JSON.stringify(config, null, 2)};
   generateXamarinXAML(tokens) {
     const xaml = [];
     xaml.push('<?xml version="1.0" encoding="utf-8"?>');
-    xaml.push('<!-- Design Tokens - Auto-generated Xamarin XAML Colors -->');
+    xaml.push('<!-- Design Tokens - Auto-generated Xamarin XAML Resources -->');
+    xaml.push('<!-- Do not edit this file manually -->');
     xaml.push('<ResourceDictionary xmlns="http://xamarin.com/schemas/2014/forms"');
     xaml.push('                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">');
     xaml.push('');
     
+    // Colors
     if (tokens.colors) {
       xaml.push('    <!-- Colors -->');
       Object.entries(tokens.colors).forEach(([key, value]) => {
@@ -679,11 +1081,310 @@ export default ${JSON.stringify(config, null, 2)};
           }
         }
       });
+      xaml.push('');
     }
     
-    xaml.push('');
+    // Spacing/Dimensions
+    if (tokens.spacing) {
+      xaml.push('    <!-- Spacing -->');
+      Object.entries(tokens.spacing).forEach(([key, value]) => {
+        const actualValue = this.getTokenValue(value);
+        if (typeof actualValue === 'string') {
+          const numericValue = this.convertToPoints(actualValue);
+          const spacingName = this.toPascalCase(`Spacing ${key}`);
+          xaml.push(`    <x:Double x:Key="${spacingName}">${numericValue}</x:Double>`);
+        }
+      });
+      xaml.push('');
+    }
+    
+    // Border Radius
+    if (tokens.borderRadius) {
+      xaml.push('    <!-- Border Radius -->');
+      Object.entries(tokens.borderRadius).forEach(([key, value]) => {
+        const actualValue = this.getTokenValue(value);
+        if (typeof actualValue === 'string') {
+          const numericValue = this.convertToPoints(actualValue);
+          const radiusName = this.toPascalCase(`BorderRadius ${key}`);
+          xaml.push(`    <x:Double x:Key="${radiusName}">${numericValue}</x:Double>`);
+        }
+      });
+      xaml.push('');
+    }
+    
+    // Typography
+    if (tokens.typography) {
+      if (tokens.typography.fontSize) {
+        xaml.push('    <!-- Font Sizes -->');
+        Object.entries(tokens.typography.fontSize).forEach(([key, value]) => {
+          const actualValue = this.getTokenValue(value);
+          if (typeof actualValue === 'string') {
+            const numericValue = this.convertToPoints(actualValue);
+            const fontSizeName = this.toPascalCase(`FontSize ${key}`);
+            xaml.push(`    <x:Double x:Key="${fontSizeName}">${numericValue}</x:Double>`);
+          }
+        });
+        xaml.push('');
+      }
+      
+      if (tokens.typography.fontFamily) {
+        xaml.push('    <!-- Font Families -->');
+        Object.entries(tokens.typography.fontFamily).forEach(([key, value]) => {
+          const actualValue = this.getTokenValue(value);
+          if (typeof actualValue === 'string') {
+            // Extract first font from font stack for Xamarin
+            const fontName = actualValue.split(',')[0].trim().replace(/['"]/g, '');
+            const fontFamilyName = this.toPascalCase(`FontFamily ${key}`);
+            xaml.push(`    <x:String x:Key="${fontFamilyName}">${fontName}</x:String>`);
+          }
+        });
+        xaml.push('');
+      }
+    }
+    
     xaml.push('</ResourceDictionary>');
     return xaml.join('\n');
+  }
+
+  generateReactNativeContent(tokens) {
+    const js = [];
+    
+    js.push('// Design Tokens - Auto-generated React Native Styles');
+    js.push('// Do not edit this file manually');
+    js.push('');
+    
+    // Colors
+    if (tokens.colors) {
+      js.push('export const colors = {');
+      Object.entries(tokens.colors).forEach(([key, value]) => {
+        if (typeof value === 'object' && value !== null) {
+          js.push(`  ${this.toCamelCase(key)}: {`);
+          Object.entries(value).forEach(([shade, colorValue]) => {
+            const actualValue = this.getTokenValue(colorValue);
+            if (typeof actualValue === 'string' && actualValue.startsWith('#')) {
+              js.push(`    ${this.toCamelCase(shade)}: '${actualValue}',`);
+            }
+          });
+          js.push('  },');
+        } else {
+          const actualValue = this.getTokenValue(value);
+          if (typeof actualValue === 'string' && actualValue.startsWith('#')) {
+            js.push(`  ${this.toCamelCase(key)}: '${actualValue}',`);
+          }
+        }
+      });
+      js.push('};');
+      js.push('');
+    }
+    
+    // Spacing
+    if (tokens.spacing) {
+      js.push('export const spacing = {');
+      Object.entries(tokens.spacing).forEach(([key, value]) => {
+        const actualValue = this.getTokenValue(value);
+        if (typeof actualValue === 'string') {
+          const numericValue = this.convertToRNPoints(actualValue);
+          js.push(`  ${this.toCamelCase(key)}: ${numericValue},`);
+        }
+      });
+      js.push('};');
+      js.push('');
+    }
+    
+    // Typography
+    if (tokens.typography) {
+      if (tokens.typography.fontSize) {
+        js.push('export const fontSize = {');
+        Object.entries(tokens.typography.fontSize).forEach(([key, value]) => {
+          const actualValue = this.getTokenValue(value);
+          if (typeof actualValue === 'string') {
+            const numericValue = this.convertToRNPoints(actualValue);
+            js.push(`  ${this.toCamelCase(key)}: ${numericValue},`);
+          }
+        });
+        js.push('};');
+        js.push('');
+      }
+      
+      if (tokens.typography.fontFamily) {
+        js.push('export const fontFamily = {');
+        Object.entries(tokens.typography.fontFamily).forEach(([key, value]) => {
+          const actualValue = this.getTokenValue(value);
+          if (typeof actualValue === 'string') {
+            // Extract first font from font stack for React Native
+            const fontName = actualValue.split(',')[0].trim().replace(/['"]/g, '');
+            js.push(`  ${this.toCamelCase(key)}: '${fontName}',`);
+          }
+        });
+        js.push('};');
+        js.push('');
+      }
+    }
+    
+    // Border Radius
+    if (tokens.borderRadius) {
+      js.push('export const borderRadius = {');
+      Object.entries(tokens.borderRadius).forEach(([key, value]) => {
+        const actualValue = this.getTokenValue(value);
+        if (typeof actualValue === 'string') {
+          const numericValue = this.convertToRNPoints(actualValue);
+          js.push(`  ${this.toCamelCase(key)}: ${numericValue},`);
+        }
+      });
+      js.push('};');
+      js.push('');
+    }
+    
+    // Shadows for React Native
+    if (tokens.shadows) {
+      js.push('export const shadows = {');
+      Object.entries(tokens.shadows).forEach(([key, value]) => {
+        const actualValue = this.getTokenValue(value);
+        if (typeof actualValue === 'string') {
+          const shadowStyle = this.convertToRNShadow(actualValue);
+          js.push(`  ${this.toCamelCase(key)}: ${JSON.stringify(shadowStyle, null, 4).replace(/\n/g, '\n    ')},`);
+        }
+      });
+      js.push('};');
+      js.push('');
+    }
+    
+    // Combined export
+    js.push('export const tokens = {');
+    if (tokens.colors) js.push('  colors,');
+    if (tokens.spacing) js.push('  spacing,');
+    if (tokens.typography?.fontSize) js.push('  fontSize,');
+    if (tokens.typography?.fontFamily) js.push('  fontFamily,');
+    if (tokens.borderRadius) js.push('  borderRadius,');
+    if (tokens.shadows) js.push('  shadows,');
+    js.push('};');
+    js.push('');
+    js.push('export default tokens;');
+    
+    return js.join('\n');
+  }
+
+  generateFlutterContent(tokens) {
+    const dart = [];
+    
+    dart.push('// Design Tokens - Auto-generated Flutter/Dart');
+    dart.push('// Do not edit this file manually');
+    dart.push('');
+    dart.push('import \'package:flutter/material.dart\';');
+    dart.push('');
+    dart.push('class DesignTokens {');
+    
+    // Colors
+    if (tokens.colors) {
+      dart.push('  // Colors');
+      dart.push('  static class Colors {');
+      Object.entries(tokens.colors).forEach(([key, value]) => {
+        if (typeof value === 'object' && value !== null) {
+          Object.entries(value).forEach(([shade, colorValue]) => {
+            const actualValue = this.getTokenValue(colorValue);
+            if (typeof actualValue === 'string' && actualValue.startsWith('#')) {
+              const colorName = this.toCamelCase(`${key}_${shade}`);
+              const flutterColor = this.convertToFlutterColor(actualValue);
+              dart.push(`    static const Color ${colorName} = ${flutterColor};`);
+            }
+          });
+        } else {
+          const actualValue = this.getTokenValue(value);
+          if (typeof actualValue === 'string' && actualValue.startsWith('#')) {
+            const colorName = this.toCamelCase(key);
+            const flutterColor = this.convertToFlutterColor(actualValue);
+            dart.push(`    static const Color ${colorName} = ${flutterColor};`);
+          }
+        }
+      });
+      dart.push('  }');
+      dart.push('');
+    }
+    
+    // Spacing
+    if (tokens.spacing) {
+      dart.push('  // Spacing');
+      dart.push('  static class Spacing {');
+      Object.entries(tokens.spacing).forEach(([key, value]) => {
+        const actualValue = this.getTokenValue(value);
+        if (typeof actualValue === 'string') {
+          const numericValue = this.convertToRNPoints(actualValue);
+          dart.push(`    static const double ${this.toCamelCase(key)} = ${numericValue};`);
+        }
+      });
+      dart.push('  }');
+      dart.push('');
+    }
+    
+    // Typography
+    if (tokens.typography) {
+      if (tokens.typography.fontSize) {
+        dart.push('  // Font Sizes');
+        dart.push('  static class FontSize {');
+        Object.entries(tokens.typography.fontSize).forEach(([key, value]) => {
+          const actualValue = this.getTokenValue(value);
+          if (typeof actualValue === 'string') {
+            const numericValue = this.convertToRNPoints(actualValue);
+            dart.push(`    static const double ${this.toCamelCase(key)} = ${numericValue};`);
+          }
+        });
+        dart.push('  }');
+        dart.push('');
+      }
+      
+      if (tokens.typography.fontFamily) {
+        dart.push('  // Font Families');
+        dart.push('  static class FontFamily {');
+        Object.entries(tokens.typography.fontFamily).forEach(([key, value]) => {
+          const actualValue = this.getTokenValue(value);
+          if (typeof actualValue === 'string') {
+            const fontName = actualValue.split(',')[0].trim().replace(/['"]/g, '');
+            dart.push(`    static const String ${this.toCamelCase(key)} = '${fontName}';`);
+          }
+        });
+        dart.push('  }');
+        dart.push('');
+      }
+    }
+    
+    // Border Radius
+    if (tokens.borderRadius) {
+      dart.push('  // Border Radius');
+      dart.push('  static class BorderRadius {');
+      Object.entries(tokens.borderRadius).forEach(([key, value]) => {
+        const actualValue = this.getTokenValue(value);
+        if (typeof actualValue === 'string') {
+          const numericValue = this.convertToRNPoints(actualValue);
+          dart.push(`    static const double ${this.toCamelCase(key)} = ${numericValue};`);
+        }
+      });
+      dart.push('  }');
+      dart.push('');
+    }
+    
+    // Shadows
+    if (tokens.shadows) {
+      dart.push('  // Shadows');
+      dart.push('  static class Shadows {');
+      Object.entries(tokens.shadows).forEach(([key, value]) => {
+        const actualValue = this.getTokenValue(value);
+        if (typeof actualValue === 'string') {
+          const shadowProps = this.parseCSShadow(actualValue);
+          const flutterColor = this.convertToFlutterColor(shadowProps.color);
+          dart.push(`    static const BoxShadow ${this.toCamelCase(key)} = BoxShadow(`);
+          dart.push(`      offset: Offset(${shadowProps.x}, ${shadowProps.y}),`);
+          dart.push(`      blurRadius: ${shadowProps.blur},`);
+          dart.push(`      color: ${flutterColor},`);
+          dart.push('    );');
+        }
+      });
+      dart.push('  }');
+      dart.push('');
+    }
+    
+    dart.push('}');
+    
+    return dart.join('\n');
   }
 
   /**
