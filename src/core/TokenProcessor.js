@@ -107,14 +107,14 @@ export class TokenProcessor {
       const coreColors = rawTokens.core?.colors || {};
       const semanticColors = rawTokens.semantic?.colors || {};
       
-      Object.assign(colors, this.flattenTokenCategory(coreColors));
-      Object.assign(colors, this.flattenTokenCategory(semanticColors));
+      Object.assign(colors, this.preserveNestedStructure(coreColors));
+      Object.assign(colors, this.preserveNestedStructure(semanticColors));
     } else if (rawTokens.color) {
       // Token Studio format with direct 'color' field (singular)
-      Object.assign(colors, this.flattenTokenCategory(rawTokens.color));
+      Object.assign(colors, this.preserveNestedStructure(rawTokens.color));
     } else if (rawTokens.colors) {
       // Direct colors format (plural)
-      Object.assign(colors, this.flattenTokenCategory(rawTokens.colors));
+      Object.assign(colors, this.preserveNestedStructure(rawTokens.colors));
     }
 
     return colors;
@@ -301,6 +301,31 @@ export class TokenProcessor {
       return this.flattenTokenCategory(rawTokens[category]);
     }
     return null;
+  }
+
+  /**
+   * Preserve nested structure for colors (category -> shade -> value)
+   */
+  preserveNestedStructure(obj) {
+    const structured = {};
+    
+    Object.entries(obj).forEach(([category, shades]) => {
+      if (shades && typeof shades === 'object' && !Array.isArray(shades)) {
+        structured[category] = {};
+        
+        Object.entries(shades).forEach(([shade, value]) => {
+          if (value && typeof value === 'object' && value.value !== undefined) {
+            // Token Studio format with .value
+            structured[category][shade] = this.resolveTokenValue(value.value);
+          } else {
+            // Direct value
+            structured[category][shade] = this.resolveTokenValue(value);
+          }
+        });
+      }
+    });
+
+    return structured;
   }
 
   /**

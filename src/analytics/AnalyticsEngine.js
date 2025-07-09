@@ -356,6 +356,9 @@ export class AnalyticsEngine {
     
     const htmlTemplate = this.getHTMLTemplate(reportData);
     
+    // Ensure output directory exists
+    await fs.ensureDir(this.config.outputDir);
+    
     const fileName = outputPath || path.join(this.config.outputDir, `analytics-report-${Date.now()}.html`);
     await fs.writeFile(fileName, htmlTemplate);
     
