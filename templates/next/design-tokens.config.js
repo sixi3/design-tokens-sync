@@ -16,6 +16,14 @@ export default {
     scss: 'styles/_tokens.scss',
     json: 'data/tokens.json',
     javascript: 'data/tokens.js'
+    // Mobile platforms (added automatically based on init selection):
+    // ios: 'platforms/ios/Colors.swift',
+    // android: 'platforms/android/colors.xml',
+    // xamarin: 'platforms/xamarin/Colors.xaml',
+    // reactNative: 'platforms/reactNative/tokens.js',
+    // flutter: 'platforms/flutter/design_tokens.dart',
+    // kotlinCompose: 'platforms/kotlinCompose/DesignTokens.kt',
+    // swiftui: 'platforms/swiftui/DesignTokens.swift'
   },
   nextjs: {
     // Next.js specific configuration

@@ -16,6 +16,14 @@ export default {
     scss: 'src/styles/_tokens.scss',
     json: 'src/data/tokens.json',
     javascript: 'src/data/tokens.js'
+    // Mobile platforms (added automatically based on init selection):
+    // ios: 'src/platforms/ios/Colors.swift',
+    // android: 'src/platforms/android/colors.xml',
+    // xamarin: 'src/platforms/xamarin/Colors.xaml',
+    // reactNative: 'src/platforms/reactNative/tokens.js',
+    // flutter: 'src/platforms/flutter/design_tokens.dart',
+    // kotlinCompose: 'src/platforms/kotlinCompose/DesignTokens.kt',
+    // swiftui: 'src/platforms/swiftui/DesignTokens.swift'
   },
   react: {
     // React-specific token generation
