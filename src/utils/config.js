@@ -28,7 +28,11 @@ const configSchema = Joi.object({
     json: Joi.string().allow(null),
     ios: Joi.string().allow(null),
     android: Joi.string().allow(null),
-    xamarin: Joi.string().allow(null)
+    xamarin: Joi.string().allow(null),
+    reactNative: Joi.string().allow(null),
+    flutter: Joi.string().allow(null),
+    kotlinCompose: Joi.string().allow(null),
+    swiftui: Joi.string().allow(null)
   }),
   
   git: Joi.object({
