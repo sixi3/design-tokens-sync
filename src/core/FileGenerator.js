@@ -528,6 +528,19 @@ export default ${JSON.stringify(config, null, 2)};
   /**
    * Utility methods
    */
+  
+  /**
+   * Get token value from either Token Studio format or direct value
+   */
+  getTokenValue(tokenData) {
+    if (tokenData && typeof tokenData === 'object') {
+      // Token Studio format: {value: "...", type: "..."}
+      return tokenData.value || tokenData.$value;
+    }
+    // Direct value
+    return tokenData;
+  }
+
   kebabCase(str) {
     return str.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase();
   }
@@ -556,19 +569,50 @@ export default ${JSON.stringify(config, null, 2)};
         if (typeof value === 'object' && value !== null) {
           // Nested structure: category -> shade -> value
           Object.entries(value).forEach(([shade, colorValue]) => {
-            if (typeof colorValue === 'string' && colorValue.startsWith('#')) {
+            // Handle both simple string values and Figma Token Studio format
+            const actualValue = this.getTokenValue(colorValue);
+            if (typeof actualValue === 'string' && actualValue.startsWith('#')) {
               const varName = this.toCamelCase(`${key} ${shade}`);
-              swift.push(`    static let ${varName} = UIColor(hex: "${colorValue}")`);
+              swift.push(`    static let ${varName} = UIColor(hex: "${actualValue}")`);
             }
           });
-        } else if (typeof value === 'string' && value.startsWith('#')) {
-          // Flat structure: key -> value
-          const varName = this.toCamelCase(key);
-          swift.push(`    static let ${varName} = UIColor(hex: "${value}")`);
+        } else {
+          // Handle flat structure
+          const actualValue = this.getTokenValue(value);
+          if (typeof actualValue === 'string' && actualValue.startsWith('#')) {
+            const varName = this.toCamelCase(key);
+            swift.push(`    static let ${varName} = UIColor(hex: "${actualValue}")`);
+          }
         }
       });
     }
     
+    swift.push('}');
+    swift.push('');
+    swift.push('// UIColor hex initializer extension');
+    swift.push('extension UIColor {');
+    swift.push('    convenience init(hex: String) {');
+    swift.push('        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)');
+    swift.push('        var int: UInt64 = 0');
+    swift.push('        Scanner(string: hex).scanHexInt64(&int)');
+    swift.push('        let a, r, g, b: UInt64');
+    swift.push('        switch hex.count {');
+    swift.push('        case 3: // RGB (12-bit)');
+    swift.push('            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)');
+    swift.push('        case 6: // RGB (24-bit)');
+    swift.push('            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)');
+    swift.push('        case 8: // ARGB (32-bit)');
+    swift.push('            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)');
+    swift.push('        default:');
+    swift.push('            (a, r, g, b) = (1, 1, 1, 0)');
+    swift.push('        }');
+    swift.push('        self.init(');
+    swift.push('            red: Double(r) / 255,');
+    swift.push('            green: Double(g) / 255,');
+    swift.push('            blue: Double(b) / 255,');
+    swift.push('            alpha: Double(a) / 255');
+    swift.push('        )');
+    swift.push('    }');
     swift.push('}');
     return swift.join('\n');
   }
@@ -584,14 +628,19 @@ export default ${JSON.stringify(config, null, 2)};
         if (typeof value === 'object' && value !== null) {
           // Nested structure: category -> shade -> value
           Object.entries(value).forEach(([shade, colorValue]) => {
-            if (typeof colorValue === 'string' && colorValue.startsWith('#')) {
-              xml.push(`    <color name="${key}_${shade}">${colorValue}</color>`);
+            // Handle both simple string values and Figma Token Studio format
+            const actualValue = this.getTokenValue(colorValue);
+            if (typeof actualValue === 'string' && actualValue.startsWith('#')) {
+              xml.push(`    <color name="${key}_${shade}">${actualValue}</color>`);
             }
           });
-        } else if (typeof value === 'string' && value.startsWith('#')) {
-          // Flat structure: key -> value
-          const colorName = key.replace(/-/g, '_');
-          xml.push(`    <color name="${colorName}">${value}</color>`);
+        } else {
+          // Handle flat structure
+          const actualValue = this.getTokenValue(value);
+          if (typeof actualValue === 'string' && actualValue.startsWith('#')) {
+            const colorName = key.replace(/-/g, '_');
+            xml.push(`    <color name="${colorName}">${actualValue}</color>`);
+          }
         }
       });
     }
@@ -614,15 +663,20 @@ export default ${JSON.stringify(config, null, 2)};
         if (typeof value === 'object' && value !== null) {
           // Nested structure: category -> shade -> value
           Object.entries(value).forEach(([shade, colorValue]) => {
-            if (typeof colorValue === 'string' && colorValue.startsWith('#')) {
+            // Handle both simple string values and Figma Token Studio format
+            const actualValue = this.getTokenValue(colorValue);
+            if (typeof actualValue === 'string' && actualValue.startsWith('#')) {
               const colorName = this.toPascalCase(`${key} ${shade}`);
-              xaml.push(`    <Color x:Key="${colorName}">${colorValue}</Color>`);
+              xaml.push(`    <Color x:Key="${colorName}">${actualValue}</Color>`);
             }
           });
-        } else if (typeof value === 'string' && value.startsWith('#')) {
-          // Flat structure: key -> value
-          const colorName = this.toPascalCase(key);
-          xaml.push(`    <Color x:Key="${colorName}">${value}</Color>`);
+        } else {
+          // Handle flat structure
+          const actualValue = this.getTokenValue(value);
+          if (typeof actualValue === 'string' && actualValue.startsWith('#')) {
+            const colorName = this.toPascalCase(key);
+            xaml.push(`    <Color x:Key="${colorName}">${actualValue}</Color>`);
+          }
         }
       });
     }

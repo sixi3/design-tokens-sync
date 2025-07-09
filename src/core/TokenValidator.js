@@ -153,10 +153,8 @@ export class TokenValidator {
       }
     }
 
-    // Check for colors category (now extracted from core/semantic if needed)
-    if (!tokensToValidate.colors) {
-      errors.push('Missing required token category: colors');
-    }
+    // Note: Removed the colors check from here since it's handled in validateRequiredCategories
+    // which has better logic for handling nested structures and configuration-based requirements
 
     // Check for common typos or incorrect structures
     const commonTypos = ['colour', 'color', 'spacings', 'typo', 'fonts'];
@@ -181,18 +179,41 @@ export class TokenValidator {
     required.forEach(category => {
       // Handle nested category references like 'core.colors'
       const categoryPath = category.split('.');
-      let currentObject = this.isFigmaTokenStudioFormat(tokens) ? tokens : tokensToValidate;
-      let found = true;
       
-      for (const segment of categoryPath) {
-        if (!currentObject || !currentObject[segment]) {
-          found = false;
-          break;
+      // For Figma format, if the category looks like a nested path (e.g., 'core.colors'),
+      // try both the original structure and the extracted structure
+      let found = false;
+      
+      if (this.isFigmaTokenStudioFormat(tokens) && categoryPath.length > 1) {
+        // Try to find in original nested structure first
+        let currentObject = tokens;
+        let tempFound = true;
+        
+        for (const segment of categoryPath) {
+          if (!currentObject || !currentObject[segment]) {
+            tempFound = false;
+            break;
+          }
+          currentObject = currentObject[segment];
         }
-        currentObject = currentObject[segment];
+        
+        if (tempFound && currentObject && typeof currentObject === 'object' && Object.keys(currentObject).length > 0) {
+          found = true;
+        }
       }
       
-      if (!found || (currentObject && typeof currentObject === 'object' && Object.keys(currentObject).length === 0)) {
+      // If not found in nested structure or not a nested path, check extracted tokens
+      if (!found) {
+        // For simple category names (like 'colors'), check in extracted tokens
+        const simpleCategoryName = categoryPath[categoryPath.length - 1];
+        if (tokensToValidate[simpleCategoryName] && 
+            typeof tokensToValidate[simpleCategoryName] === 'object' && 
+            Object.keys(tokensToValidate[simpleCategoryName]).length > 0) {
+          found = true;
+        }
+      }
+      
+      if (!found) {
         errors.push(`Missing required token category: ${category}`);
       }
     });
