@@ -905,12 +905,21 @@ async function setupGitHubActions(answers) {
 async function updatePackageScripts() {
   const packagePath = 'package.json';
   
-  if (!await fs.pathExists(packagePath)) {
-    console.warn('⚠️ package.json not found - skipping script updates');
-    return;
-  }
+  let pkg;
   
-  const pkg = await fs.readJSON(packagePath);
+  if (!await fs.pathExists(packagePath)) {
+    // Create a basic package.json if it doesn't exist
+    console.log('📦 Creating package.json...');
+    pkg = {
+      name: path.basename(process.cwd()),
+      version: '1.0.0',
+      type: 'module',
+      scripts: {},
+      dependencies: {}
+    };
+  } else {
+    pkg = await fs.readJSON(packagePath);
+  }
   
   pkg.scripts = pkg.scripts || {};
   
@@ -921,6 +930,11 @@ async function updatePackageScripts() {
     'tokens:validate': 'design-tokens-sync validate',
     'tokens:analytics': 'design-tokens-sync analytics report'
   });
+  
+  // Ensure module type is set to avoid ES module warnings
+  if (!pkg.type) {
+    pkg.type = 'module';
+  }
   
   await fs.writeJSON(packagePath, pkg, { spaces: 2 });
 }
