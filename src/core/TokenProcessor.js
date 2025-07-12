@@ -31,7 +31,7 @@ export class TokenProcessor {
   }
 
   /**
-   * Load and parse tokens from the configured input file
+   * Load and parse tokens from the configured input file0
    */
   async loadTokens(forceReload = false) {
     if (this.tokens && !forceReload) {
@@ -60,6 +60,7 @@ export class TokenProcessor {
       }
 
       const rawTokens = await fs.readJSON(tokensPath);
+      this.rawTokens = rawTokens; // Store raw tokens for token resolution
       this.tokens = this.transformTokens(rawTokens);
       
       console.log(`✅ Design tokens loaded from: ${tokensPath}`);
@@ -316,10 +317,10 @@ export class TokenProcessor {
         Object.entries(shades).forEach(([shade, value]) => {
           if (value && typeof value === 'object' && value.value !== undefined) {
             // Token Studio format with .value
-            structured[category][shade] = this.resolveTokenValue(value.value);
+            structured[category][shade] = this.resolveTokenValue(value.value, this.rawTokens);
           } else {
             // Direct value
-            structured[category][shade] = this.resolveTokenValue(value);
+            structured[category][shade] = this.resolveTokenValue(value, this.rawTokens);
           }
         });
       }
@@ -339,13 +340,13 @@ export class TokenProcessor {
       
       if (value && typeof value === 'object' && value.value !== undefined) {
         // Token Studio format with .value
-        flattened[newKey] = this.resolveTokenValue(value.value);
+        flattened[newKey] = this.resolveTokenValue(value.value, this.rawTokens);
       } else if (value && typeof value === 'object' && !Array.isArray(value)) {
         // Nested structure
         Object.assign(flattened, this.flattenTokenCategory(value, newKey));
       } else {
         // Direct value
-        flattened[newKey] = this.resolveTokenValue(value);
+        flattened[newKey] = this.resolveTokenValue(value, this.rawTokens);
       }
     });
 
@@ -355,13 +356,41 @@ export class TokenProcessor {
   /**
    * Resolve token references (e.g., {core.colors.primary.500})
    */
-  resolveTokenValue(value) {
+  resolveTokenValue(value, rawTokens = null) {
     if (typeof value === 'string' && value.startsWith('{') && value.endsWith('}')) {
-      // This is a token reference - for now return as-is
-      // TODO: Implement full token resolution
-      return value;
+      // This is a token reference - resolve it
+      const tokenPath = value.slice(1, -1); // Remove { and }
+      const resolvedValue = this.resolveTokenReference(tokenPath, rawTokens || this.rawTokens);
+      return resolvedValue !== undefined ? resolvedValue : value; // Return original if not found
     }
     return value;
+  }
+
+  /**
+   * Resolve a token reference path (e.g., "core.colors.blue.500")
+   */
+  resolveTokenReference(path, rawTokens) {
+    if (!rawTokens) return undefined;
+    
+    const pathParts = path.split('.');
+    let current = rawTokens;
+    
+    for (const part of pathParts) {
+      if (current && typeof current === 'object' && current[part] !== undefined) {
+        current = current[part];
+      } else {
+        return undefined;
+      }
+    }
+    
+    // If we found a token object with a value property, return the value
+    if (current && typeof current === 'object' && current.value !== undefined) {
+      // Recursively resolve nested token references
+      return this.resolveTokenValue(current.value, rawTokens);
+    }
+    
+    // If it's a direct value, return it
+    return current;
   }
 
   /**
@@ -384,6 +413,9 @@ export class TokenProcessor {
 
       const rawTokens = await fs.readJSON(tokensPath);
       console.log(`✅ Design tokens loaded from: ${tokensPath}`);
+
+      // Store raw tokens for token resolution
+      this.rawTokens = rawTokens;
 
       // Validate using raw tokens (preserves Figma Token Studio format)
       const validation = await this.validator.validate(rawTokens);
@@ -437,6 +469,9 @@ export class TokenProcessor {
     this.watcher.on('change', async (path) => {
       console.log(`📝 Token file changed: ${path}`);
       try {
+        // Clear cached tokens to force reload
+        this.tokens = null;
+        this.rawTokens = null;
         await this.sync();
       } catch (error) {
         console.error('❌ Auto-sync failed:', error.message);
