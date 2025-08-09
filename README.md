@@ -776,10 +776,10 @@ MIT © [sixi3](https://github.com/sixi3)
 
 ## 🔗 Links
 
-- [GitHub Repository](https://github.com/sixi3/figma-code-sync)
+- [GitHub Repository](https://github.com/sixi3/design-tokens-sync)
 - [npm Package](https://www.npmjs.com/package/design-tokens-sync)
-- [Documentation](https://github.com/sixi3/figma-code-sync#readme)
-- [Issues](https://github.com/sixi3/figma-code-sync/issues)
+- [Documentation](https://github.com/sixi3/design-tokens-sync#readme)
+- [Issues](https://github.com/sixi3/design-tokens-sync/issues)
 - [Token Studio](https://tokens.studio/)
 
 ---
