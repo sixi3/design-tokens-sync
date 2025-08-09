@@ -1846,48 +1846,205 @@ export default ${JSON.stringify(config, null, 2)};
 
   buildShadcnThemeCss(tokens, { hsl = true, mapping = {} } = {}) {
     const get = (obj, pathStr) => pathStr.split('.').reduce((o, k) => (o && o[k] !== undefined ? o[k] : undefined), obj);
-    const color = (pathStr, fallback) => {
-      const v = get(tokens, pathStr);
-      const raw = typeof v === 'string' ? v : undefined;
-      return this.formatColor(raw || fallback, hsl);
+    
+    // Smart color getter that tries multiple path patterns
+    const color = (paths, fallback) => {
+      const pathsToTry = Array.isArray(paths) ? paths : [paths];
+      
+      for (const pathStr of pathsToTry) {
+        // Try the path as-is first
+        let v = get(tokens, pathStr);
+        
+        // If not found and doesn't start with 'core', try prefixing with 'core.'
+        if (v === undefined && !pathStr.startsWith('core.')) {
+          v = get(tokens, `core.${pathStr}`);
+        }
+        
+        // Handle Token Studio format (object with value property)
+        if (v && typeof v === 'object' && v.value !== undefined) {
+          v = v.value;
+        }
+        
+        // If we found a valid color value, use it
+        if (typeof v === 'string' && v.length > 0) {
+          return this.formatColor(v, hsl);
+        }
+      }
+      
+      // Fallback
+      return this.formatColor(fallback, hsl);
     };
-    const radius = get(tokens, 'borderRadius.md') || '0.375rem';
 
-    // Defaults (can be overridden by mapping)
+    // Try to get radius from multiple possible paths
+    const radiusPaths = ['borderRadius.md', 'core.borderRadius.md', 'borderRadius.base', 'core.borderRadius.base'];
+    let radius = '0.375rem';
+    for (const path of radiusPaths) {
+      const r = get(tokens, path);
+      if (r) {
+        radius = (typeof r === 'object' && r.value) ? r.value : r;
+        break;
+      }
+    }
+
+    // Defaults with multiple path fallbacks (can be overridden by mapping)
     const light = {
-      background: color('colors.neutral.50', '#ffffff'),
-      foreground: color('colors.neutral.900', '#111827'),
-      primary: color('colors.primary.500', '#3b82f6'),
-      'primary-foreground': color('colors.neutral.50', '#f9fafb'),
-      secondary: color('colors.neutral.100', '#f3f4f6'),
-      'secondary-foreground': color('colors.neutral.900', '#111827'),
-      muted: color('colors.neutral.100', '#f3f4f6'),
-      'muted-foreground': color('colors.neutral.600', '#4b5563'),
-      accent: color('colors.neutral.100', '#f3f4f6'),
-      'accent-foreground': color('colors.neutral.900', '#111827'),
-      destructive: color('colors.red.600', '#ef4444'),
-      'destructive-foreground': color('colors.neutral.50', '#f9fafb'),
-      border: color('colors.neutral.200', '#e5e7eb'),
-      input: color('colors.neutral.200', '#e5e7eb'),
-      ring: color('colors.primary.500', '#3b82f6'),
+      background: color([
+        'semantic.colors.background.primary',
+        'semantic.colors.background.secondary', 
+        'colors.gray.50',
+        'colors.neutral.50',
+        'colors.primary.50'
+      ], '#ffffff'),
+      foreground: color([
+        'semantic.colors.text.primary',
+        'colors.gray.900',
+        'colors.neutral.900',
+        'colors.primary.900'
+      ], '#111827'),
+      primary: color([
+        'semantic.colors.brand.primary',
+        'colors.primary.500',
+        'colors.primary.600'
+      ], '#3b82f6'),
+      'primary-foreground': color([
+        'semantic.colors.text.inverse',
+        'colors.gray.50',
+        'colors.neutral.50',
+        'colors.primary.50'
+      ], '#f9fafb'),
+      secondary: color([
+        'semantic.colors.background.tertiary',
+        'colors.gray.100',
+        'colors.neutral.100',
+        'colors.primary.100'
+      ], '#f3f4f6'),
+      'secondary-foreground': color([
+        'semantic.colors.text.secondary',
+        'colors.gray.900',
+        'colors.neutral.900'
+      ], '#111827'),
+      muted: color([
+        'semantic.colors.background.tertiary',
+        'colors.gray.100',
+        'colors.neutral.100'
+      ], '#f3f4f6'),
+      'muted-foreground': color([
+        'semantic.colors.text.muted',
+        'colors.gray.600',
+        'colors.neutral.600'
+      ], '#4b5563'),
+      accent: color([
+        'colors.gray.100',
+        'colors.neutral.100'
+      ], '#f3f4f6'),
+      'accent-foreground': color([
+        'semantic.colors.text.primary',
+        'colors.gray.900',
+        'colors.neutral.900'
+      ], '#111827'),
+      destructive: color([
+        'semantic.colors.feedback.error',
+        'colors.error.100',
+        'colors.error.300',
+        'colors.red.600'
+      ], '#ef4444'),
+      'destructive-foreground': color([
+        'semantic.colors.text.inverse',
+        'colors.gray.50',
+        'colors.neutral.50'
+      ], '#f9fafb'),
+      border: color([
+        'semantic.colors.border.default',
+        'semantic.colors.border.light',
+        'colors.gray.500',
+        'colors.neutral.200'
+      ], '#e5e7eb'),
+      input: color([
+        'semantic.colors.border.default',
+        'colors.gray.500',
+        'colors.neutral.200'
+      ], '#e5e7eb'),
+      ring: color([
+        'semantic.colors.brand.primary',
+        'colors.primary.500'
+      ], '#3b82f6'),
       radius
     };
+    
+    // Dark mode - try to use appropriate dark variants
     const dark = {
-      background: color('colors.neutral.900', '#0b1220'),
-      foreground: color('colors.neutral.50', '#f9fafb'),
-      primary: color('colors.primary.600', '#2563eb'),
-      'primary-foreground': color('colors.neutral.50', '#f9fafb'),
-      secondary: color('colors.neutral.800', '#1f2937'),
-      'secondary-foreground': color('colors.neutral.50', '#f9fafb'),
-      muted: color('colors.neutral.800', '#1f2937'),
-      'muted-foreground': color('colors.neutral.400', '#9ca3af'),
-      accent: color('colors.neutral.800', '#1f2937'),
-      'accent-foreground': color('colors.neutral.50', '#f9fafb'),
-      destructive: color('colors.red.600', '#dc2626'),
-      'destructive-foreground': color('colors.neutral.50', '#f9fafb'),
-      border: color('colors.neutral.800', '#1f2937'),
-      input: color('colors.neutral.800', '#1f2937'),
-      ring: color('colors.primary.600', '#2563eb'),
+      background: color([
+        'semantic.colors.background.inverse',
+        'colors.primary.500',
+        'colors.gray.900',
+        'colors.neutral.900'
+      ], '#0b1220'),
+      foreground: color([
+        'semantic.colors.text.inverse',
+        'colors.gray.50',
+        'colors.neutral.50'
+      ], '#f9fafb'),
+      primary: color([
+        'semantic.colors.brand.secondary',
+        'colors.primary.600',
+        'colors.primary.500'
+      ], '#2563eb'),
+      'primary-foreground': color([
+        'semantic.colors.text.inverse',
+        'colors.gray.50',
+        'colors.neutral.50'
+      ], '#f9fafb'),
+      secondary: color([
+        'colors.gray.800',
+        'colors.neutral.800',
+        'colors.primary.800'
+      ], '#1f2937'),
+      'secondary-foreground': color([
+        'semantic.colors.text.inverse',
+        'colors.gray.50',
+        'colors.neutral.50'
+      ], '#f9fafb'),
+      muted: color([
+        'colors.gray.800',
+        'colors.neutral.800'
+      ], '#1f2937'),
+      'muted-foreground': color([
+        'colors.gray.400',
+        'colors.neutral.400'
+      ], '#9ca3af'),
+      accent: color([
+        'colors.gray.800',
+        'colors.neutral.800'
+      ], '#1f2937'),
+      'accent-foreground': color([
+        'semantic.colors.text.inverse',
+        'colors.gray.50',
+        'colors.neutral.50'
+      ], '#f9fafb'),
+      destructive: color([
+        'semantic.colors.feedback.error',
+        'colors.error.100',
+        'colors.error.300',
+        'colors.red.600'
+      ], '#dc2626'),
+      'destructive-foreground': color([
+        'semantic.colors.text.inverse',
+        'colors.gray.50',
+        'colors.neutral.50'
+      ], '#f9fafb'),
+      border: color([
+        'colors.gray.800',
+        'colors.neutral.800',
+        'colors.primary.800'
+      ], '#1f2937'),
+      input: color([
+        'colors.gray.800',
+        'colors.neutral.800'
+      ], '#1f2937'),
+      ring: color([
+        'semantic.colors.brand.secondary',
+        'colors.primary.600'
+      ], '#2563eb'),
       radius
     };
 

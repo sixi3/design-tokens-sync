@@ -1,0 +1,37 @@
+:root {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 0%;
+  --primary: 16 62% 15%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 20 100% 98%;
+  --secondary-foreground: 0 0% 0%;
+  --muted: 20 100% 98%;
+  --muted-foreground: 35 13% 62%;
+  --accent: 20 100% 98%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 300 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 20 23% 92%;
+  --input: 20 23% 92%;
+  --ring: 16 62% 15%;
+  --radius: 0.375rem;
+}
+
+.dark {
+  --background: 16 62% 15%;
+  --foreground: 0 0% 100%;
+  --primary: 40 62% 15%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 29 16% 52%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 29 16% 52%;
+  --muted-foreground: 24 100% 99%;
+  --accent: 29 16% 52%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 300 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 29 16% 52%;
+  --input: 29 16% 52%;
+  --ring: 40 62% 15%;
+  --radius: 0.375rem;
+}
