@@ -1906,19 +1906,24 @@ export default ${JSON.stringify(config, null, 2)};
     const light = {
       background: color([
         'semantic.colors.background.primary',
-        'semantic.colors.background.secondary', 
+        'semantic.colors.background.secondary',
+        // Transformed tokens place semantic under colors
+        'colors.background.primary',
+        'colors.background.secondary',
         'colors.gray.50',
         'colors.neutral.50',
         'colors.primary.50'
       ], '#ffffff'),
       foreground: color([
         'semantic.colors.text.primary',
+        'colors.text.primary',
         'colors.gray.900',
         'colors.neutral.900',
         'colors.primary.900'
       ], '#111827'),
       primary: color([
         'semantic.colors.brand.primary',
+        'colors.brand.primary',
         'colors.blue.500',
         'colors.primary.500',
         'colors.primary.600'
@@ -1931,12 +1936,14 @@ export default ${JSON.stringify(config, null, 2)};
       ], '#f9fafb'),
       secondary: color([
         'semantic.colors.background.tertiary',
+        'colors.background.tertiary',
         'colors.gray.100',
         'colors.neutral.100',
         'colors.primary.100'
       ], '#f3f4f6'),
       'secondary-foreground': color([
         'semantic.colors.text.secondary',
+        'colors.text.secondary',
         'colors.gray.900',
         'colors.neutral.900'
       ], '#111827'),
@@ -1947,6 +1954,7 @@ export default ${JSON.stringify(config, null, 2)};
       ], '#f3f4f6'),
       'muted-foreground': color([
         'semantic.colors.text.muted',
+        'colors.text.muted',
         'colors.gray.600',
         'colors.neutral.600'
       ], '#4b5563'),
@@ -1961,6 +1969,7 @@ export default ${JSON.stringify(config, null, 2)};
       ], '#111827'),
       destructive: color([
         'semantic.colors.feedback.error',
+        'colors.feedback.error',
         'colors.red.500',
         'colors.error.100',
         'colors.error.300',
@@ -1972,18 +1981,27 @@ export default ${JSON.stringify(config, null, 2)};
         'colors.neutral.50'
       ], '#f9fafb'),
       border: color([
+        // Prefer transformed semantic under colors
+        'colors.border.default',
+        'colors.border.light',
+        // Also try raw semantic path in case of direct use
         'semantic.colors.border.default',
         'semantic.colors.border.light',
-        'colors.gray.500',
-        'colors.neutral.200'
+        // Prefer lighter gray before darker
+        'colors.gray.200',
+        'colors.neutral.200',
+        'colors.gray.500'
       ], '#e5e7eb'),
       input: color([
+        'colors.border.default',
         'semantic.colors.border.default',
-        'colors.gray.500',
-        'colors.neutral.200'
+        'colors.gray.200',
+        'colors.neutral.200',
+        'colors.gray.500'
       ], '#e5e7eb'),
       ring: color([
         'semantic.colors.brand.primary',
+        'colors.brand.primary',
         'colors.primary.500'
       ], '#3b82f6'),
       radius
@@ -1993,6 +2011,7 @@ export default ${JSON.stringify(config, null, 2)};
     const dark = {
       background: color([
         'semantic.colors.background.inverse',
+        'colors.background.inverse',
         'colors.primary.500',
         'colors.gray.900',
         'colors.neutral.900'
@@ -2004,6 +2023,7 @@ export default ${JSON.stringify(config, null, 2)};
       ], '#f9fafb'),
       primary: color([
         'semantic.colors.brand.secondary',
+        'colors.brand.secondary',
         'colors.primary.600',
         'colors.primary.500'
       ], '#2563eb'),
@@ -2061,6 +2081,7 @@ export default ${JSON.stringify(config, null, 2)};
       ], '#1f2937'),
       ring: color([
         'semantic.colors.brand.secondary',
+        'colors.brand.secondary',
         'colors.primary.600'
       ], '#2563eb'),
       radius
@@ -2165,9 +2186,9 @@ export default ${JSON.stringify(config, null, 2)};
       const d = max - min;
       s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
       switch (max) {
-        case r: h = (g - b) / d + (g < b ? 6 : 5); break;
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
         case g: h = (b - r) / d + 3; break;
-        case b: h = (r - g) / d + 1; break;
+        case b: h = (r - g) / d + 4; break;
       }
       h *= 60;
     }
