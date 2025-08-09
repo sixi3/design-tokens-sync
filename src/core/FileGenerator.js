@@ -100,6 +100,7 @@ export class FileGenerator {
     if (config.shadcn && config.shadcn.enable && config.output.shadcnThemeCss) {
       results.shadcnThemeCss = await this.generateShadcnThemeCss(tokens, config.output.shadcnThemeCss, {
         hsl: config.shadcn.hsl !== false,
+        format: config.shadcn.format || 'hsl',
         mapping: config.shadcn.mapping || {}
       });
     }
@@ -1844,7 +1845,7 @@ export default ${JSON.stringify(config, null, 2)};
     return { path: outputPath, content };
   }
 
-  buildShadcnThemeCss(tokens, { hsl = true, mapping = {} } = {}) {
+  buildShadcnThemeCss(tokens, { hsl = true, mapping = {}, format = 'hsl' } = {}) {
     const get = (obj, pathStr) => pathStr.split('.').reduce((o, k) => (o && o[k] !== undefined ? o[k] : undefined), obj);
     
     // Smart color getter that tries multiple path patterns
@@ -1878,17 +1879,17 @@ export default ${JSON.stringify(config, null, 2)};
             }
             
             if (typeof refValue === 'string' && refValue.length > 0) {
-              return this.formatColor(refValue, hsl);
+              return this.formatColorForShadcn(refValue, format);
             }
           } else {
             // Direct color value
-            return this.formatColor(v, hsl);
+            return this.formatColorForShadcn(v, format);
           }
         }
       }
       
       // Fallback
-      return this.formatColor(fallback, hsl);
+      return this.formatColorForShadcn(fallback, format);
     };
 
     // Try to get radius from multiple possible paths
@@ -2114,7 +2115,7 @@ export default ${JSON.stringify(config, null, 2)};
               const isColorValue = k.includes('color') || k.includes('background') || k.includes('foreground') || 
                                  k.includes('border') || k.includes('primary') || k.includes('secondary') ||
                                  k.includes('destructive') || k.includes('ring');
-              target[k] = isColorValue ? this.formatColor(resolvedValue, hsl) : resolvedValue;
+              target[k] = isColorValue ? this.formatColorForShadcn(resolvedValue, format) : resolvedValue;
             } else {
               target[k] = v; // Keep as fallback if resolution fails
             }
@@ -2123,7 +2124,7 @@ export default ${JSON.stringify(config, null, 2)};
             const isColorValue = k.includes('color') || k.includes('background') || k.includes('foreground') || 
                                k.includes('border') || k.includes('primary') || k.includes('secondary') ||
                                k.includes('destructive') || k.includes('ring');
-            target[k] = isColorValue ? this.formatColor(v, hsl) : v;
+            target[k] = isColorValue ? this.formatColorForShadcn(v, format) : v;
           }
         }
       });
@@ -2131,21 +2132,42 @@ export default ${JSON.stringify(config, null, 2)};
     applyOverrides(light, mapping.light);
     applyOverrides(dark, mapping.dark);
 
-    const toCssVars = (obj) =>
-      Object.entries(obj)
-        .map(([k, v]) => `  --${k}: ${k === 'radius' ? v : v};`)
+    const toCssVars = (obj, includeComments = false) => {
+      return Object.entries(obj)
+        .map(([k, v]) => {
+          if (k === 'radius') {
+            return `  --${k}: ${v};`;
+          }
+          
+          if (includeComments && format === 'rgb' && typeof v === 'string' && v.includes(' ')) {
+            // Try to convert RGB back to hex for comment
+            const rgbMatch = v.match(/^(\d+)\s+(\d+)\s+(\d+)$/);
+            if (rgbMatch) {
+              const [, r, g, b] = rgbMatch;
+              const hex = '#' + [r, g, b].map(x => parseInt(x).toString(16).padStart(2, '0').toUpperCase()).join('');
+              return `  --${k}: ${v}; /* ${hex} */`;
+            }
+          }
+          
+          return `  --${k}: ${v};`;
+        })
         .join('\n');
+    };
 
+    const includeComments = format === 'rgb';
+    const lightComment = includeComments ? '  /* Map design tokens to shadcn variables */' : '';
+    
     return [
       ':root {',
-      toCssVars(light),
+      lightComment,
+      toCssVars(light, includeComments),
       '}',
       '',
       '.dark {',
-      toCssVars(dark),
+      toCssVars(dark, includeComments),
       '}',
       ''
-    ].join('\n');
+    ].filter(line => line !== '').join('\n');
   }
 
   formatColor(value, hsl = true) {
@@ -2165,6 +2187,28 @@ export default ${JSON.stringify(config, null, 2)};
     return value;
   }
 
+  formatColorForShadcn(value, format = 'hsl') {
+    if (!value) return format === 'hsl' ? '0 0% 100%' : '255 255 255';
+    
+    if (format === 'rgb') {
+      // Convert to RGB format for shadcn
+      if (value.startsWith('#')) {
+        return this.hexToRgbTriple(value);
+      }
+      if (value.startsWith('rgb')) {
+        const m = value.match(/rgba?\(([^)]+)\)/);
+        if (m) {
+          const [r, g, b] = m[1].split(',').slice(0, 3).map((n) => Math.round(parseFloat(n.trim())));
+          return `${r} ${g} ${b}`;
+        }
+      }
+      return value;
+    } else {
+      // Default HSL format
+      return this.formatColor(value, true);
+    }
+  }
+
   hexToHslTriple(hex) {
     const c = hex.replace('#', '');
     const bigint = c.length === 3
@@ -2174,6 +2218,17 @@ export default ${JSON.stringify(config, null, 2)};
     const g = (bigint >> 8) & 255;
     const b = bigint & 255;
     return this.rgbToHslTriple(r, g, b);
+  }
+
+  hexToRgbTriple(hex) {
+    const c = hex.replace('#', '');
+    const bigint = c.length === 3
+      ? parseInt(c.split('').map((ch) => ch + ch).join(''), 16)
+      : parseInt(c, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `${r} ${g} ${b}`;
   }
 
   rgbToHslTriple(r, g, b) {

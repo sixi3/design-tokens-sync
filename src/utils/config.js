@@ -77,8 +77,9 @@ const configSchema = Joi.object({
   shadcn: Joi.object({
     enable: Joi.boolean().default(true),
     hsl: Joi.boolean().default(true),
+    format: Joi.string().valid('hsl', 'rgb').default('hsl'),
     mapping: Joi.object().optional()
-  }).default({ enable: true, hsl: true }),
+  }).default({ enable: true, hsl: true, format: 'hsl' }),
   
   // Framework-specific configurations
   react: Joi.object({
