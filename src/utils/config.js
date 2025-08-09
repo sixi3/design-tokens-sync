@@ -21,11 +21,18 @@ const configSchema = Joi.object({
       Joi.string(),
       Joi.array().items(Joi.string())
     ).default('src/styles/tokens.css'),
-    tailwind: Joi.string().allow(null).default('tailwind.config.js'),
+    tailwind: Joi.string().allow(null).default(null),
+    // New preset outputs
+    tailwindPresetEsm: Joi.string().allow(null).default('tokens.tailwind.preset.js'),
+    tailwindPresetCjs: Joi.string().allow(null).default('tokens.tailwind.preset.cjs'),
     typescript: Joi.string().allow(null),
     scss: Joi.string().allow(null),
     javascript: Joi.string().allow(null),
+    // New dual-module tokens output (CJS)
+    tokensCjs: Joi.string().allow(null).default('src/data/tokens.cjs'),
     json: Joi.string().allow(null),
+    // Shadcn theme CSS bridge
+    shadcnThemeCss: Joi.string().allow(null).default('src/styles/shadcn-theme.css'),
     ios: Joi.string().allow(null),
     android: Joi.string().allow(null),
     xamarin: Joi.string().allow(null),
@@ -51,10 +58,27 @@ const configSchema = Joi.object({
     outputDir: Joi.string().default('.tokens-analytics')
   }),
   
+  // CSS generation options
+  css: Joi.object({
+    includeUtilities: Joi.boolean().default(false)
+  }).default({ includeUtilities: false }),
+  
   watch: Joi.object({
     enabled: Joi.boolean().default(true),
     ignore: Joi.array().items(Joi.string()).default(['node_modules', '.git'])
   }),
+
+  // Init scaffolding
+  init: Joi.object({
+    scaffoldRootTailwindConfig: Joi.boolean().default(true)
+  }).default({ scaffoldRootTailwindConfig: true }),
+
+  // Shadcn specific settings
+  shadcn: Joi.object({
+    enable: Joi.boolean().default(true),
+    hsl: Joi.boolean().default(true),
+    mapping: Joi.object().optional()
+  }).default({ enable: true, hsl: true }),
   
   // Framework-specific configurations
   react: Joi.object({
@@ -137,6 +161,10 @@ export async function loadConfig(configPathOrSearchFrom = process.cwd()) {
       if (error) {
         throw new Error(`Configuration validation error: ${error.message}`);
       }
+      // Deprecation notice for root tailwind output
+      if (value?.output?.tailwind) {
+        console.warn('⚠️  Deprecation: output.tailwind will be removed in a future version. Generate presets via output.tailwindPresetEsm/Cjs and reference them from your root Tailwind config.');
+      }
       return value;
     }
     
@@ -167,7 +195,10 @@ export function createDefaultConfig() {
     },
     output: {
       css: 'src/styles/tokens.css',
-      tailwind: 'tailwind.config.js'
+      tailwindPresetEsm: 'tokens.tailwind.preset.js',
+      tailwindPresetCjs: 'tokens.tailwind.preset.cjs',
+      tokensCjs: 'src/data/tokens.cjs',
+      shadcnThemeCss: 'src/styles/shadcn-theme.css'
     },
     git: {
       enabled: true,
@@ -178,6 +209,9 @@ export function createDefaultConfig() {
     analytics: {
       enabled: true,
       autoCollect: true
-    }
+    },
+    css: { includeUtilities: false },
+    init: { scaffoldRootTailwindConfig: true },
+    shadcn: { enable: true, hsl: true }
   };
 } 

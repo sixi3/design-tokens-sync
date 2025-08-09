@@ -10,7 +10,14 @@ module.exports = {
   
   output: {
     css: 'src/styles/tokens.css',
-    tailwind: 'tailwind.config.js'
+    // Prefer Tailwind presets
+    tailwindPresetEsm: 'tokens.tailwind.preset.js',
+    tailwindPresetCjs: 'tokens.tailwind.preset.cjs',
+    // Dual-module tokens
+    javascript: 'src/data/tokens.js',
+    tokensCjs: 'src/data/tokens.cjs',
+    // Shadcn theme CSS bridge
+    shadcnThemeCss: 'src/styles/shadcn-theme.css'
   },
   
   git: {

@@ -12,10 +12,14 @@ export default {
   output: {
     css: 'styles/tokens.css',
     typescript: 'types/tokens.d.ts',
-    tailwind: 'tailwind.config.js',
+    // Prefer Tailwind presets instead of writing root config
+    tailwindPresetEsm: 'tokens.tailwind.preset.js',
+    tailwindPresetCjs: 'tokens.tailwind.preset.cjs',
     scss: 'styles/_tokens.scss',
     json: 'data/tokens.json',
-    javascript: 'data/tokens.js'
+    javascript: 'data/tokens.js',
+    tokensCjs: 'data/tokens.cjs',
+    shadcnThemeCss: 'styles/shadcn-theme.css'
     // Mobile platforms (added automatically based on init selection):
     // ios: 'platforms/ios/Colors.swift',
     // android: 'platforms/android/colors.xml',

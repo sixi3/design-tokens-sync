@@ -11,8 +11,9 @@ This template provides a comprehensive design system foundation for React applic
 
 ### Generated Files
 - `src/styles/tokens.css` - CSS custom properties
+- `src/styles/shadcn-theme.css` - Shadcn CSS vars bridge with `.dark` support
 - `src/types/tokens.d.ts` - TypeScript type definitions
-- `tailwind.config.js` - Tailwind configuration (if enabled)
+- `tokens.tailwind.preset.{js,cjs}` - Tailwind preset (theme.extend)
 
 ### Example Components
 - `Button.tsx` - Demonstrates variant patterns and token usage
@@ -56,7 +57,29 @@ npm start            # Start your React app
 }
 ```
 
-### Tailwind Classes (if enabled)
+### Tailwind Setup
+Use the generated preset and shadcn theme CSS:
+
+```ts
+// tailwind.config.ts (scaffolded if missing)
+import tokensPreset from './tokens.tailwind.preset.js';
+import type { Config } from 'tailwindcss';
+
+const config: Config = {
+  darkMode: ['class'],
+  content: ['./src/**/*.{js,ts,jsx,tsx}'],
+  presets: [tokensPreset],
+  plugins: [require('tailwindcss-animate')]
+};
+export default config;
+```
+
+Import the theme CSS once (e.g., in `src/styles/globals.css`):
+```css
+@import './shadcn-theme.css';
+```
+
+### Tailwind Classes
 ```jsx
 <div className="bg-gray-50 text-gray-900 p-4 rounded-md shadow-base">
   Content with token-based styles

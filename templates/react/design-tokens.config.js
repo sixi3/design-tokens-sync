@@ -12,10 +12,16 @@ export default {
   output: {
     css: 'src/styles/tokens.css',
     typescript: 'src/types/tokens.d.ts',
-    tailwind: 'tailwind.config.js',
+    // Prefer Tailwind presets instead of writing root config
+    tailwindPresetEsm: 'tokens.tailwind.preset.js',
+    tailwindPresetCjs: 'tokens.tailwind.preset.cjs',
     scss: 'src/styles/_tokens.scss',
     json: 'src/data/tokens.json',
-    javascript: 'src/data/tokens.js'
+    javascript: 'src/data/tokens.js',
+    // Dual-module tokens
+    tokensCjs: 'src/data/tokens.cjs',
+    // Shadcn theme CSS bridge
+    shadcnThemeCss: 'src/styles/shadcn-theme.css'
     // Mobile platforms (added automatically based on init selection):
     // ios: 'src/platforms/ios/Colors.swift',
     // android: 'src/platforms/android/colors.xml',

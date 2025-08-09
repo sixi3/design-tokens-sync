@@ -8,12 +8,14 @@
 ## ✨ Features
 
 - 🔄 **Automatic Token Syncing** - Real-time sync from Figma Token Studio to code
-- 🎨 **Multi-Format Output** - CSS variables, Tailwind config, TypeScript definitions, SCSS
+- 🎨 **Multi-Format Output** - CSS variables, Tailwind presets, TypeScript definitions, SCSS
+- 🌙 **Shadcn UI Ready** - Built-in dark mode support with CSS variable mapping
 - 📊 **Built-in Analytics** - Track token usage and generate insights
 - 🔍 **Smart Validation** - Comprehensive token validation with helpful warnings
 - 🚀 **CI/CD Ready** - GitHub Actions workflows and git automation
 - ⚡ **Hot Reload** - Watch mode for development
 - 🏗️ **Framework Agnostic** - Works with React, Vue, Next.js, and more
+- 📦 **Dual Module Support** - ESM and CommonJS outputs for maximum compatibility
 
 ## 📦 Installation
 
@@ -86,7 +88,7 @@ const report = await designTokensSync.analytics.report();
 Create a `design-tokens.config.js` file in your project root:
 
 ```javascript
-module.exports = {
+export default {
   tokens: {
     input: 'tokens.json',
     validation: {
@@ -97,9 +99,33 @@ module.exports = {
   
   output: {
     css: 'src/styles/tokens.css',
-    tailwind: 'tailwind.config.js',
+    // Generate Tailwind presets instead of overwriting root config
+    tailwindPresetEsm: 'tokens.tailwind.preset.js',
+    tailwindPresetCjs: 'tokens.tailwind.preset.cjs',
+    // Dual-module token outputs
+    javascript: 'src/data/tokens.js',
+    tokensCjs: 'src/data/tokens.cjs',
+    // Shadcn theme CSS bridge
+    shadcnThemeCss: 'src/styles/shadcn-theme.css',
     typescript: 'src/types/tokens.d.ts',
     scss: 'src/styles/_tokens.scss'
+  },
+  
+  // CSS generation options
+  css: {
+    includeUtilities: false // Clean CSS vars only (no duplicate utilities)
+  },
+  
+  // Shadcn UI integration
+  shadcn: {
+    enable: true,
+    hsl: true, // Output HSL format for CSS variables
+    mapping: {} // Custom variable mappings (optional)
+  },
+  
+  // Init scaffolding
+  init: {
+    scaffoldRootTailwindConfig: true // Auto-create tailwind.config.ts if missing
   },
   
   git: {
@@ -170,9 +196,10 @@ Supports both Token Studio and standard JSON formats:
 
 ## 🎯 Output Formats
 
-### CSS Custom Properties
+### CSS Custom Properties (Clean by Default)
 
 ```css
+/* src/styles/tokens.css - Only CSS variables, no utility classes */
 :root {
   /* Colors */
   --color-primary-500: #3b82f6;
@@ -182,9 +209,30 @@ Supports both Token Studio and standard JSON formats:
 }
 ```
 
-### Tailwind Configuration
+### Shadcn UI Theme CSS (with Dark Mode)
+
+```css
+/* src/styles/shadcn-theme.css - Automatic light/dark theme */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222 84% 5%;
+  --primary: 221 83% 53%;
+  --primary-foreground: 210 40% 98%;
+  --radius: 0.375rem;
+}
+
+.dark {
+  --background: 222 84% 5%;
+  --foreground: 210 40% 98%;
+  --primary: 217 91% 60%;
+  --primary-foreground: 222 84% 5%;
+}
+```
+
+### Tailwind Preset (Not Root Config)
 
 ```javascript
+// tokens.tailwind.preset.js - Use in your tailwind.config.ts
 export default {
   theme: {
     extend: {
@@ -201,7 +249,23 @@ export default {
 };
 ```
 
-### TypeScript Definitions
+### Dual Module Outputs
+
+```javascript
+// src/data/tokens.js (ESM)
+export const tokens = { colors: { primary: { 500: '#3b82f6' } } };
+export const colors = { primary: { 500: '#3b82f6' } };
+export default tokens;
+
+// src/data/tokens.cjs (CommonJS)
+module.exports = {
+  tokens: { colors: { primary: { 500: '#3b82f6' } } },
+  colors: { primary: { 500: '#3b82f6' } }
+};
+module.exports.default = module.exports.tokens;
+```
+
+### TypeScript Definitions (Aligned with Runtime)
 
 ```typescript
 export interface Colors {
@@ -213,6 +277,35 @@ export interface Colors {
 export interface DesignTokens {
   colors: Colors;
   spacing: Record<string, string>;
+  // Optional metadata (may not exist at runtime)
+  source?: string;
+  lastLoaded?: string;
+}
+
+// Named exports match JS module exports
+declare const tokens: DesignTokens;
+export default tokens;
+export const colors: Colors;
+export const spacing: Record<string, string>;
+```
+
+### Package.json Exports (Auto-configured)
+
+```json
+{
+  "type": "module",
+  "exports": {
+    "./tokens": {
+      "import": "./src/data/tokens.js",
+      "require": "./src/data/tokens.cjs",
+      "default": "./src/data/tokens.js"
+    },
+    "./tailwind-preset": {
+      "import": "./tokens.tailwind.preset.js",
+      "require": "./tokens.tailwind.preset.cjs",
+      "default": "./tokens.tailwind.preset.js"
+    }
+  }
 }
 ```
 
@@ -295,17 +388,67 @@ The package consists of several core modules:
 
 ## 📚 Examples
 
-### React with Tailwind
+### Shadcn UI + Next.js Setup
+
+```bash
+# 1. Initialize with shadcn support
+npx design-tokens-sync init
+# ✓ Creates tailwind.config.ts (if missing)
+# ✓ Generates shadcn-theme.css with dark mode
+# ✓ Sets up package.json exports
+
+# 2. Import the theme CSS (in app/globals.css)
+```
+
+```css
+/* app/globals.css */
+@import '../src/styles/shadcn-theme.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+```typescript
+// tailwind.config.ts (auto-generated if missing)
+import tokensPreset from './tokens.tailwind.preset.js';
+import type { Config } from 'tailwindcss';
+
+const config: Config = {
+  darkMode: ['class'],
+  content: ['./app/**/*.{js,ts,jsx,tsx}'],
+  presets: [tokensPreset],
+  plugins: [require('tailwindcss-animate')]
+};
+export default config;
+```
 
 ```jsx
-// After running tokens:sync, use tokens in your components
-function Button({ variant = 'primary' }) {
+// app/page.tsx - Dark mode works automatically
+export default function Page() {
   return (
-    <button className={`bg-${variant}-500 text-white px-4 py-2`}>
-      Click me
-    </button>
+    <div className="bg-background text-foreground">
+      <button className="bg-primary text-primary-foreground px-4 py-2 rounded-md">
+        Themed Button
+      </button>
+    </div>
   );
 }
+```
+
+### Dual Module Imports
+
+```javascript
+// ESM import (modern)
+import { colors, spacing } from './src/data/tokens.js';
+import preset from './tokens.tailwind.preset.js';
+
+// CommonJS require (legacy)
+const { colors, spacing } = require('./src/data/tokens.cjs');
+const preset = require('./tokens.tailwind.preset.cjs');
+
+// Package exports (if configured)
+import { colors } from 'your-package/tokens';
+import preset from 'your-package/tailwind-preset';
 ```
 
 ### CSS Custom Properties
@@ -316,19 +459,24 @@ function Button({ variant = 'primary' }) {
   padding: var(--spacing-4);
   border-radius: var(--border-radius-md);
 }
+
+/* Shadcn variables work automatically */
+.card {
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+}
 ```
 
-### TypeScript
+### TypeScript (Aligned with Runtime)
 
 ```typescript
-import type { DesignTokens } from './types/tokens';
+import type { DesignTokens, Colors } from './types/tokens';
+import { colors, spacing } from './src/data/tokens.js';
 
 // Fully typed token access
-const theme: DesignTokens = {
-  colors: {
-    primary: { 500: '#3b82f6' }
-  }
-};
+const primaryColor: string = colors.primary[500];
+const buttonSpacing: string = spacing[4];
 ```
 
 ## 🚨 Troubleshooting
@@ -429,41 +577,54 @@ npx design-tokens-sync init --github-actions
 
 ## 📚 Framework Integration
 
-### Next.js App Router
+### Next.js App Router (with Shadcn)
 
 ```javascript
-// design-tokens.config.js
-module.exports = {
+// design-tokens.config.js (auto-generated with new defaults)
+export default {
   output: {
-    css: 'app/globals.css',
-    tailwind: 'tailwind.config.js',
+    css: 'styles/tokens.css',
+    shadcnThemeCss: 'styles/shadcn-theme.css', // Dark mode support
+    tailwindPresetEsm: 'tokens.tailwind.preset.js', // Use preset, not root config
+    tailwindPresetCjs: 'tokens.tailwind.preset.cjs',
+    javascript: 'data/tokens.js',
+    tokensCjs: 'data/tokens.cjs', // Dual module support
     typescript: 'types/tokens.d.ts'
-  }
+  },
+  shadcn: { enable: true, hsl: true }, // Auto-enable shadcn support
+  init: { scaffoldRootTailwindConfig: true } // Auto-create tailwind.config.ts
 };
 ```
 
-### Vue + Vite
+### Vue + Vite (Updated Defaults)
 
 ```javascript
-module.exports = {
+export default {
   output: {
     css: 'src/styles/tokens.css',
+    tailwindPresetEsm: 'tokens.tailwind.preset.js',
+    tailwindPresetCjs: 'tokens.tailwind.preset.cjs',
+    javascript: 'src/data/tokens.js',
+    tokensCjs: 'src/data/tokens.cjs',
     typescript: 'src/types/tokens.d.ts'
   },
+  css: { includeUtilities: false }, // Clean CSS vars only
   watch: {
     ignore: ['dist', 'node_modules']
   }
 };
 ```
 
-### React Native
+### React Native (Mobile Optimized)
 
 ```javascript
-module.exports = {
+export default {
   output: {
     javascript: 'src/design-tokens.js', // React Native compatible
+    tokensCjs: 'src/design-tokens.cjs', // For metro bundler
     typescript: 'src/types/tokens.d.ts'
-  }
+  },
+  css: { includeUtilities: false } // No CSS utilities needed for RN
 };
 ```
 
@@ -558,11 +719,25 @@ const report = await analytics.generateReport(usage);
 - **Group related tokens:** Keep spacing, colors, typography organized
 - **Document token purpose:** Use descriptions in Token Studio
 
+### Shadcn UI Integration
+
+- **Import theme CSS once:** Add `@import 'shadcn-theme.css'` to your globals.css
+- **Use presets, not root config:** Let the tool scaffold `tailwind.config.ts` with presets
+- **Enable dark mode:** Use `class="dark"` for automatic theme switching
+- **Leverage CSS variables:** Use `hsl(var(--primary))` in custom components
+
+### Module Strategy
+
+- **ESM by default:** Modern projects should use `import` from `.js` files
+- **CJS when needed:** Legacy tools can `require()` from `.cjs` files
+- **Package exports:** Use the auto-configured exports for clean imports
+
 ### Sync Strategy
 
 - **Development:** Use watch mode for real-time updates
 - **CI/CD:** Validate tokens before syncing
 - **Production:** Use git hooks to prevent inconsistencies
+- **Clean CSS:** Keep `css.includeUtilities: false` to avoid Tailwind duplication
 
 ### Team Workflow
 
@@ -571,6 +746,7 @@ const report = await analytics.generateReport(usage);
 3. **Commit** tokens.json to repository
 4. **CI/CD** automatically syncs and deploys changes
 5. **Developers** pull latest changes and get updated tokens
+6. **Dark mode** works automatically with shadcn theme CSS
 
 ## 🤝 Contributing
 
