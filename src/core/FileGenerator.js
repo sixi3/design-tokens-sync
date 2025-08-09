@@ -1865,9 +1865,25 @@ export default ${JSON.stringify(config, null, 2)};
           v = v.value;
         }
         
-        // If we found a valid color value, use it
+        // If we found a valid value, check if it's a Token Studio reference
         if (typeof v === 'string' && v.length > 0) {
-          return this.formatColor(v, hsl);
+          // Handle Token Studio references like "{core.colors.blue.500}"
+          if (v.startsWith('{') && v.endsWith('}')) {
+            const refPath = v.slice(1, -1); // Remove { }
+            let refValue = get(tokens, refPath);
+            
+            // Handle nested Token Studio format
+            if (refValue && typeof refValue === 'object' && refValue.value !== undefined) {
+              refValue = refValue.value;
+            }
+            
+            if (typeof refValue === 'string' && refValue.length > 0) {
+              return this.formatColor(refValue, hsl);
+            }
+          } else {
+            // Direct color value
+            return this.formatColor(v, hsl);
+          }
         }
       }
       
@@ -1903,6 +1919,7 @@ export default ${JSON.stringify(config, null, 2)};
       ], '#111827'),
       primary: color([
         'semantic.colors.brand.primary',
+        'colors.blue.500',
         'colors.primary.500',
         'colors.primary.600'
       ], '#3b82f6'),
@@ -1944,6 +1961,7 @@ export default ${JSON.stringify(config, null, 2)};
       ], '#111827'),
       destructive: color([
         'semantic.colors.feedback.error',
+        'colors.red.500',
         'colors.error.100',
         'colors.error.300',
         'colors.red.600'
