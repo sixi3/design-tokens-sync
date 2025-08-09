@@ -2051,7 +2051,42 @@ export default ${JSON.stringify(config, null, 2)};
     // Apply mapping overrides
     const applyOverrides = (target, overrides) => {
       Object.entries(overrides || {}).forEach(([k, v]) => {
-        if (typeof v === 'string') target[k] = this.formatColor(v, hsl);
+        if (typeof v === 'string') {
+          // If it's a token reference, resolve it first
+          if (v.startsWith('{') && v.endsWith('}')) {
+            const tokenPath = v.slice(1, -1); // Remove { }
+            
+            // Try to get the actual value
+            let resolvedValue = get(tokens, tokenPath);
+            
+            // Handle Token Studio format (object with value property)
+            if (resolvedValue && typeof resolvedValue === 'object' && resolvedValue.value !== undefined) {
+              resolvedValue = resolvedValue.value;
+            }
+            
+            // Handle array values (like font families)
+            if (Array.isArray(resolvedValue)) {
+              resolvedValue = resolvedValue.join(', ');
+            }
+            
+            // If we found a value, use it, otherwise use fallback
+            if (resolvedValue !== undefined) {
+              // For non-color values (spacing, typography, etc.), don't convert to HSL
+              const isColorValue = k.includes('color') || k.includes('background') || k.includes('foreground') || 
+                                 k.includes('border') || k.includes('primary') || k.includes('secondary') ||
+                                 k.includes('destructive') || k.includes('ring');
+              target[k] = isColorValue ? this.formatColor(resolvedValue, hsl) : resolvedValue;
+            } else {
+              target[k] = v; // Keep as fallback if resolution fails
+            }
+          } else {
+            // If it's a direct value, format appropriately
+            const isColorValue = k.includes('color') || k.includes('background') || k.includes('foreground') || 
+                               k.includes('border') || k.includes('primary') || k.includes('secondary') ||
+                               k.includes('destructive') || k.includes('ring');
+            target[k] = isColorValue ? this.formatColor(v, hsl) : v;
+          }
+        }
       });
     };
     applyOverrides(light, mapping.light);
