@@ -85,17 +85,17 @@ const configSchema = Joi.object({
     fallback: Joi.string().valid('shadcn', 'none').default('shadcn'),
     extend: Joi.object({
       profile: Joi.string().valid('actual').optional(),
-      palettes: Joi.boolean().default(false),
-      semantic: Joi.boolean().default(false),
+      palettes: Joi.boolean().default(true),
+      semantic: Joi.boolean().default(true),
       components: Joi.boolean().default(false),
-      typography: Joi.boolean().default(false),
-      spacing: Joi.boolean().default(false),
+      typography: Joi.boolean().default(true),
+      spacing: Joi.boolean().default(true),
       spacingSubset: Joi.array().items(Joi.string()).optional(),
-      shadows: Joi.boolean().default(false),
-      radii: Joi.boolean().default(false),
+      shadows: Joi.boolean().default(true),
+      radii: Joi.boolean().default(true),
       includeBrand: Joi.boolean().default(true)
-    }).default({ palettes: false, semantic: false, components: false, typography: false, spacing: false, shadows: false, radii: false })
-  }).default({ enable: true, hsl: true, format: 'rgb', strict: false, fallback: 'shadcn', extend: { palettes: false, semantic: false, components: false, typography: false, spacing: false, shadows: false, radii: false } }),
+    }).default({ palettes: true, semantic: true, components: false, typography: true, spacing: true, shadows: true, radii: true, includeBrand: true })
+  }).default({ enable: true, hsl: true, format: 'rgb', strict: false, fallback: 'shadcn', extend: { palettes: true, semantic: true, components: false, typography: true, spacing: true, shadows: true, radii: true, includeBrand: true } }),
   
   // Framework-specific configurations
   react: Joi.object({

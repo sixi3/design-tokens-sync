@@ -25,7 +25,8 @@ module.exports = {
     hsl: true,
     format: 'rgb',
     strict: false,
-    fallback: 'shadcn'
+    fallback: 'shadcn',
+    extend: { palettes: true, semantic: true, typography: true, spacing: true, shadows: true, radii: true, includeBrand: true }
   },
   
   git: {

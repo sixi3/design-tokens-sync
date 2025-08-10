@@ -319,7 +319,7 @@ async function createConfigFile(answers) {
       },
       css: { includeUtilities: false },
       init: { scaffoldRootTailwindConfig: true },
-      shadcn: { enable: true, hsl: true, format: 'rgb', strict: false, fallback: 'shadcn' },
+      shadcn: { enable: true, hsl: true, format: 'rgb', strict: false, fallback: 'shadcn', extend: { palettes: true, semantic: true, typography: true, spacing: true, shadows: true, radii: true, includeBrand: true } },
       watch: {
         enabled: true,
         ignore: ['node_modules', '.git', 'dist', 'build']
@@ -499,7 +499,7 @@ ${exportSyntax} ${JSON.stringify(config, null, 2)};
         // Ensure new top-level flags
         if (!config.css) config.css = { includeUtilities: false };
         if (!config.init) config.init = { scaffoldRootTailwindConfig: true };
-        if (!config.shadcn) config.shadcn = { enable: true, hsl: true, format: 'rgb', strict: false, fallback: 'shadcn' };
+        if (!config.shadcn) config.shadcn = { enable: true, hsl: true, format: 'rgb', strict: false, fallback: 'shadcn', extend: { palettes: true, semantic: true, typography: true, spacing: true, shadows: true, radii: true, includeBrand: true } };
 
         // Regenerate the config file content
         configContent = `// Design Tokens Configuration for ${answers.framework.charAt(0).toUpperCase() + answers.framework.slice(1)}
@@ -640,7 +640,7 @@ export default ${JSON.stringify(config, null, 2)};
       },
       css: { includeUtilities: false },
       init: { scaffoldRootTailwindConfig: true },
-      shadcn: { enable: true, hsl: true, format: 'rgb', strict: false, fallback: 'shadcn' },
+      shadcn: { enable: true, hsl: true, format: 'rgb', strict: false, fallback: 'shadcn', extend: { palettes: true, semantic: true, typography: true, spacing: true, shadows: true, radii: true, includeBrand: true } },
       watch: {
         enabled: true,
         ignore: ['node_modules', '.git', 'dist', 'build']
