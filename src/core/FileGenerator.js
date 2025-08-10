@@ -101,7 +101,9 @@ export class FileGenerator {
       results.shadcnThemeCss = await this.generateShadcnThemeCss(tokens, config.output.shadcnThemeCss, {
         hsl: config.shadcn.hsl !== false,
         format: config.shadcn.format || 'hsl',
-        mapping: config.shadcn.mapping || {}
+        mapping: config.shadcn.mapping || {},
+        strict: !!config.shadcn.strict,
+        fallback: config.shadcn.fallback || 'shadcn'
       });
     }
 
@@ -1845,11 +1847,11 @@ export default ${JSON.stringify(config, null, 2)};
     return { path: outputPath, content };
   }
 
-  buildShadcnThemeCss(tokens, { hsl = true, mapping = {}, format = 'hsl' } = {}) {
+  buildShadcnThemeCss(tokens, { hsl = true, mapping = {}, format = 'hsl', strict = false, fallback = 'shadcn' } = {}) {
     const get = (obj, pathStr) => pathStr.split('.').reduce((o, k) => (o && o[k] !== undefined ? o[k] : undefined), obj);
     
     // Smart color getter that tries multiple path patterns
-    const color = (paths, fallback) => {
+    const color = (paths, hardcodedFallback) => {
       const pathsToTry = Array.isArray(paths) ? paths : [paths];
       
       for (const pathStr of pathsToTry) {
@@ -1888,8 +1890,12 @@ export default ${JSON.stringify(config, null, 2)};
         }
       }
       
-      // Fallback
-      return this.formatColorForShadcn(fallback, format);
+      // Fallback behavior
+      if (strict || fallback === 'none') {
+        // In strict mode or explicit none fallback, return an empty string to omit var
+        return '';
+      }
+      return this.formatColorForShadcn(hardcodedFallback, format);
     };
 
     // Try to get radius from multiple possible paths
@@ -2089,16 +2095,41 @@ export default ${JSON.stringify(config, null, 2)};
     };
 
     // Apply mapping overrides
+    const resolveMappingRef = (refPath) => {
+      // Try as-is against transformed tokens
+      let val = get(tokens, refPath);
+      if (val !== undefined) return val;
+
+      // Map Token Studio-style paths to transformed structure
+      const candidates = [];
+      // colors
+      candidates.push(refPath.replace(/^core\.colors\./, 'colors.'));
+      candidates.push(refPath.replace(/^semantic\.colors\./, 'colors.'));
+      // non-color categories
+      candidates.push(refPath.replace(/^core\./, ''));
+      candidates.push(refPath.replace(/^semantic\./, ''));
+      // semantic colors sometimes reside under colors.* after transform
+      if (refPath.startsWith('semantic.colors.')) {
+        const rest = refPath.replace(/^semantic\.colors\./, '');
+        candidates.push(`colors.${rest}`);
+      }
+      for (const candidate of candidates) {
+        if (!candidate || candidate === refPath) continue;
+        val = get(tokens, candidate);
+        if (val !== undefined) return val;
+      }
+      return undefined;
+    };
+
     const applyOverrides = (target, overrides) => {
       Object.entries(overrides || {}).forEach(([k, v]) => {
         if (typeof v === 'string') {
           // If it's a token reference, resolve it first
           if (v.startsWith('{') && v.endsWith('}')) {
             const tokenPath = v.slice(1, -1); // Remove { }
-            
             // Try to get the actual value
-            let resolvedValue = get(tokens, tokenPath);
-            
+            let resolvedValue = resolveMappingRef(tokenPath);
+
             // Handle Token Studio format (object with value property)
             if (resolvedValue && typeof resolvedValue === 'object' && resolvedValue.value !== undefined) {
               resolvedValue = resolvedValue.value;
@@ -2114,7 +2145,8 @@ export default ${JSON.stringify(config, null, 2)};
               // For non-color values (spacing, typography, etc.), don't convert to HSL
               const isColorValue = k.includes('color') || k.includes('background') || k.includes('foreground') || 
                                  k.includes('border') || k.includes('primary') || k.includes('secondary') ||
-                                 k.includes('destructive') || k.includes('ring');
+                                 k.includes('destructive') || k.includes('ring') || k.includes('muted') ||
+                                 k.includes('accent') || k.includes('input');
               target[k] = isColorValue ? this.formatColorForShadcn(resolvedValue, format) : resolvedValue;
             } else {
               target[k] = v; // Keep as fallback if resolution fails
@@ -2123,7 +2155,8 @@ export default ${JSON.stringify(config, null, 2)};
             // If it's a direct value, format appropriately
             const isColorValue = k.includes('color') || k.includes('background') || k.includes('foreground') || 
                                k.includes('border') || k.includes('primary') || k.includes('secondary') ||
-                               k.includes('destructive') || k.includes('ring');
+                               k.includes('destructive') || k.includes('ring') || k.includes('muted') ||
+                               k.includes('accent') || k.includes('input');
             target[k] = isColorValue ? this.formatColorForShadcn(v, format) : v;
           }
         }
@@ -2139,6 +2172,11 @@ export default ${JSON.stringify(config, null, 2)};
             return `  --${k}: ${v};`;
           }
           
+          if (!v) {
+            // Skip undefined/empty values (strict mode omission)
+            return null;
+          }
+
           if (includeComments && format === 'rgb' && typeof v === 'string' && v.includes(' ')) {
             // Try to convert RGB back to hex for comment
             const rgbMatch = v.match(/^(\d+)\s+(\d+)\s+(\d+)$/);
@@ -2151,6 +2189,7 @@ export default ${JSON.stringify(config, null, 2)};
           
           return `  --${k}: ${v};`;
         })
+        .filter(Boolean)
         .join('\n');
     };
 

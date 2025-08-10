@@ -29,6 +29,14 @@ export default {
     // kotlinCompose: 'platforms/kotlinCompose/DesignTokens.kt',
     // swiftui: 'platforms/swiftui/DesignTokens.swift'
   },
+  // Shadcn behavior
+  shadcn: {
+    enable: true,
+    hsl: true,
+    format: 'rgb',
+    strict: false,
+    fallback: 'shadcn'
+  },
   nextjs: {
     // Next.js specific configuration
     appDir: true,  // App Router support

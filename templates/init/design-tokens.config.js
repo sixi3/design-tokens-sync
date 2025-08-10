@@ -19,6 +19,14 @@ module.exports = {
     // Shadcn theme CSS bridge
     shadcnThemeCss: 'src/styles/shadcn-theme.css'
   },
+  // Shadcn behavior
+  shadcn: {
+    enable: true,
+    hsl: true,
+    format: 'rgb',
+    strict: false,
+    fallback: 'shadcn'
+  },
   
   git: {
     enabled: true,

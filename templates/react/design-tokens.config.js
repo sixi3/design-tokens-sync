@@ -9,6 +9,14 @@ export default {
       optional: ['semantic', 'component', 'core.shadows', 'core.borderRadius']
     }
   },
+  // Shadcn behavior
+  shadcn: {
+    enable: true,
+    hsl: true,
+    format: 'rgb',
+    strict: false,
+    fallback: 'shadcn'
+  },
   output: {
     css: 'src/styles/tokens.css',
     typescript: 'src/types/tokens.d.ts',

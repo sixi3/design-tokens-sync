@@ -77,9 +77,13 @@ const configSchema = Joi.object({
   shadcn: Joi.object({
     enable: Joi.boolean().default(true),
     hsl: Joi.boolean().default(true),
-    format: Joi.string().valid('hsl', 'rgb').default('hsl'),
-    mapping: Joi.object().optional()
-  }).default({ enable: true, hsl: true, format: 'hsl' }),
+    format: Joi.string().valid('hsl', 'rgb').default('rgb'),
+    mapping: Joi.object().optional(),
+    // When strict is true, variables without a resolvable token are omitted (no hardcoded defaults)
+    strict: Joi.boolean().default(false),
+    // Fallback behavior when no token found: 'shadcn' (use standard palette) or 'none'
+    fallback: Joi.string().valid('shadcn', 'none').default('shadcn')
+  }).default({ enable: true, hsl: true, format: 'rgb', strict: false, fallback: 'shadcn' }),
   
   // Framework-specific configurations
   react: Joi.object({
@@ -213,6 +217,6 @@ export function createDefaultConfig() {
     },
     css: { includeUtilities: false },
     init: { scaffoldRootTailwindConfig: true },
-    shadcn: { enable: true, hsl: true }
+    shadcn: { enable: true, hsl: true, format: 'rgb' }
   };
 } 
