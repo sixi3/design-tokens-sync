@@ -4,6 +4,10 @@ token-test.json
 token-test.fixed.json
 design-tokens-test.config.js
 shadcn-theme.test.css
+design-tokens-extended.config.js
+test.json
+shadcn-gen.css
+shadcn-gen.extended.css
 
 tokens.tailwind.preset.js
 tokens.tailwind.preset.cjs
