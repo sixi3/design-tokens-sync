@@ -103,7 +103,8 @@ export class FileGenerator {
         format: config.shadcn.format || 'hsl',
         mapping: config.shadcn.mapping || {},
         strict: !!config.shadcn.strict,
-        fallback: config.shadcn.fallback || 'shadcn'
+        fallback: config.shadcn.fallback || 'shadcn',
+        extend: config.shadcn.extend || {}
       });
     }
 
@@ -1847,7 +1848,7 @@ export default ${JSON.stringify(config, null, 2)};
     return { path: outputPath, content };
   }
 
-  buildShadcnThemeCss(tokens, { hsl = true, mapping = {}, format = 'hsl', strict = false, fallback = 'shadcn' } = {}) {
+  buildShadcnThemeCss(tokens, { hsl = true, mapping = {}, format = 'hsl', strict = false, fallback = 'shadcn', extend = {} } = {}) {
     const get = (obj, pathStr) => pathStr.split('.').reduce((o, k) => (o && o[k] !== undefined ? o[k] : undefined), obj);
     
     // Smart color getter that tries multiple path patterns
@@ -2196,17 +2197,120 @@ export default ${JSON.stringify(config, null, 2)};
     const includeComments = format === 'rgb';
     const lightComment = includeComments ? '  /* Map design tokens to shadcn variables */' : '';
     
-    return [
+    const lines = [
       ':root {',
       lightComment,
-      toCssVars(light, includeComments),
-      '}',
-      '',
-      '.dark {',
-      toCssVars(dark, includeComments),
-      '}',
-      ''
-    ].filter(line => line !== '').join('\n');
+      toCssVars(light, includeComments)
+    ];
+
+    // Extended palettes
+    if (extend && extend.palettes && tokens.colors) {
+      const addPalette = (prefix, obj) => {
+        if (!obj || typeof obj !== 'object') return;
+        Object.entries(obj).forEach(([shade, val]) => {
+          if (typeof val === 'string') {
+            lines.push(`  --${prefix}-${shade}: ${this.formatColorForShadcn(val, format)};`);
+          } else if (val && typeof val === 'object') {
+            addPalette(`${prefix}-${shade}`, val);
+          }
+        });
+      };
+
+      // Emit color scales by category
+      const categories = ['primary', 'gray', 'success', 'warning', 'error', 'info', 'neutral'];
+      categories.forEach(name => {
+        if (tokens.colors[name]) addPalette(name, tokens.colors[name]);
+      });
+
+      // Root success/warning/etc values with foreground
+      const fg = (tokens.colors.gray && tokens.colors.gray['50']) || '#FFFFFF';
+      ['success','warning','error','info','neutral'].forEach(g => {
+        const group = tokens.colors[g];
+        if (group && group['100']) {
+          lines.push(`  --${g}: ${this.formatColorForShadcn(group['100'], format)};`);
+          lines.push(`  --${g}-foreground: ${this.formatColorForShadcn(fg, format)};`);
+        }
+      });
+    }
+
+    // Extended semantic
+    if (extend && extend.semantic && tokens.colors) {
+      // In 'actual' profile, the baseline shadcn vars already cover semantic highlights.
+      // Avoid emitting extra text/background/border/brand keys to match expected shape.
+      if (!extend.profile || extend.profile !== 'actual') {
+        const tryGet = (p) => p.split('.').reduce((o, k) => (o && o[k] !== undefined ? o[k] : undefined), tokens);
+        const pushIf = (key, val) => { if (val) lines.push(`  --${key}: ${this.formatColorForShadcn(val, format)};`); };
+        pushIf('text-primary', tryGet('colors.text.primary'));
+        pushIf('text-secondary', tryGet('colors.text.secondary'));
+        pushIf('text-tertiary', tryGet('colors.text.tertiary'));
+        pushIf('text-inverse', tryGet('colors.text.inverse'));
+        pushIf('text-muted', tryGet('colors.text.muted'));
+        pushIf('background-primary', tryGet('colors.background.primary'));
+        pushIf('background-secondary', tryGet('colors.background.secondary'));
+        pushIf('background-tertiary', tryGet('colors.background.tertiary'));
+        pushIf('background-inverse', tryGet('colors.background.inverse'));
+        pushIf('border-default', tryGet('colors.border.default'));
+        pushIf('border-hover', tryGet('colors.border.hover'));
+        pushIf('border-focus', tryGet('colors.border.focus'));
+        pushIf('border-light', tryGet('colors.border.light'));
+        if (extend.includeBrand !== false) {
+          pushIf('brand-primary', tryGet('colors.brand.primary'));
+          pushIf('brand-secondary', tryGet('colors.brand.secondary'));
+          pushIf('brand-tertiary', tryGet('colors.brand.tertiary'));
+        }
+      }
+    }
+
+    // Extended radii
+    if (extend && extend.radii && tokens.borderRadius) {
+      const r = tokens.borderRadius;
+      if (r.sm) lines.push(`  --radius-sm: ${r.sm};`);
+      if (r.lg) lines.push(`  --radius-lg: ${r.lg};`);
+      if (r.xl) lines.push(`  --radius-xl: ${r.xl};`);
+      if (r['2xl']) lines.push(`  --radius-2xl: ${r['2xl']};`);
+      if (r.full) lines.push(`  --radius-full: ${r.full};`);
+    }
+
+    // Extended spacing
+    if (extend && extend.spacing && tokens.spacing) {
+      const subset = Array.isArray(extend.spacingSubset) && extend.spacingSubset.length > 0
+        ? extend.spacingSubset
+        : (extend.profile === 'actual'
+            ? ['0','1','2','3','4','5','6','8','10','12','16','20','24']
+            : null);
+      if (subset) {
+        subset.forEach(k => { if (tokens.spacing[k]) lines.push(`  --spacing-${k}: ${tokens.spacing[k]};`); });
+      } else {
+        Object.entries(tokens.spacing).forEach(([k, v]) => lines.push(`  --spacing-${k}: ${v};`));
+      }
+    }
+
+    // Extended typography
+    if (extend && extend.typography && tokens.typography) {
+      const t = tokens.typography;
+      const quoteIfNeeded = (s) => (typeof s === 'string' && /[^A-Za-z0-9_-]/.test(s) ? `"${s}"` : s);
+      if (t.fontFamily?.sans) {
+        const val = Array.isArray(t.fontFamily.sans) ? t.fontFamily.sans.map(quoteIfNeeded).join(', ') : t.fontFamily.sans;
+        lines.push(`  --font-sans: ${val};`);
+      }
+      if (t.fontFamily?.mono) {
+        const val = Array.isArray(t.fontFamily.mono) ? t.fontFamily.mono.map(quoteIfNeeded).join(', ') : t.fontFamily.mono;
+        lines.push(`  --font-mono: ${val};`);
+      }
+      Object.entries(t.fontSize || {}).forEach(([k, v]) => lines.push(`  --font-size-${k}: ${v};`));
+      Object.entries(t.fontWeight || {}).forEach(([k, v]) => lines.push(`  --font-weight-${k}: ${v};`));
+      Object.entries(t.lineHeight || {}).forEach(([k, v]) => lines.push(`  --line-height-${k}: ${v};`));
+    }
+
+    // Extended shadows
+    if (extend && extend.shadows && tokens.shadows) {
+      Object.entries(tokens.shadows).forEach(([k, v]) => lines.push(`  --shadow-${k}: ${v};`));
+    }
+
+    // Close :root and write .dark
+    lines.push('}', '', '.dark {', toCssVars(dark, includeComments), '}');
+
+    return lines.filter(line => line !== '').join('\n');
   }
 
   formatColor(value, hsl = true) {

@@ -82,8 +82,20 @@ const configSchema = Joi.object({
     // When strict is true, variables without a resolvable token are omitted (no hardcoded defaults)
     strict: Joi.boolean().default(false),
     // Fallback behavior when no token found: 'shadcn' (use standard palette) or 'none'
-    fallback: Joi.string().valid('shadcn', 'none').default('shadcn')
-  }).default({ enable: true, hsl: true, format: 'rgb', strict: false, fallback: 'shadcn' }),
+    fallback: Joi.string().valid('shadcn', 'none').default('shadcn'),
+    extend: Joi.object({
+      profile: Joi.string().valid('actual').optional(),
+      palettes: Joi.boolean().default(false),
+      semantic: Joi.boolean().default(false),
+      components: Joi.boolean().default(false),
+      typography: Joi.boolean().default(false),
+      spacing: Joi.boolean().default(false),
+      spacingSubset: Joi.array().items(Joi.string()).optional(),
+      shadows: Joi.boolean().default(false),
+      radii: Joi.boolean().default(false),
+      includeBrand: Joi.boolean().default(true)
+    }).default({ palettes: false, semantic: false, components: false, typography: false, spacing: false, shadows: false, radii: false })
+  }).default({ enable: true, hsl: true, format: 'rgb', strict: false, fallback: 'shadcn', extend: { palettes: false, semantic: false, components: false, typography: false, spacing: false, shadows: false, radii: false } }),
   
   // Framework-specific configurations
   react: Joi.object({
