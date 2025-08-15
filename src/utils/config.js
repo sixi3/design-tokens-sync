@@ -229,6 +229,22 @@ export function createDefaultConfig() {
     },
     css: { includeUtilities: false },
     init: { scaffoldRootTailwindConfig: true },
-    shadcn: { enable: true, hsl: true, format: 'rgb' }
+    shadcn: { 
+      enable: true, 
+      hsl: true, 
+      format: 'rgb',
+      strict: false,
+      fallback: 'shadcn',
+      extend: { 
+        palettes: true, 
+        semantic: true, 
+        components: false, 
+        typography: true, 
+        spacing: true, 
+        shadows: true, 
+        radii: true, 
+        includeBrand: true 
+      }
+    }
   };
 } 
