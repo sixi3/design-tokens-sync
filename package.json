@@ -1,6 +1,6 @@
 {
   "name": "design-tokens-sync",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "type": "module",
   "description": "Style Dictionary-powered design token syncing with semantic & component token support, advanced transforms, and build hooks",
   "keywords": [
