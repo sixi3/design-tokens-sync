@@ -251,7 +251,7 @@ export const tokens = {
         "textColor": "#0F3340",
         "borderColor": "#0F3340",
         "borderRadius": "0.375rem",
-        "padding": "0.75rem 1.5rem"
+        "padding": "0.75rem"
       },
       "gradient": {
         "backgroundColor": "linear-gradient(180deg, #FFFFFF 0%, #F6FCFF 100%)",
@@ -973,7 +973,7 @@ export const tokens = {
             "type": "borderRadius"
           },
           "padding": {
-            "value": "0.75rem 1.5rem",
+            "value": "0.75rem",
             "type": "spacing"
           }
         },
@@ -1821,7 +1821,7 @@ export const tokens = {
             "type": "borderRadius"
           },
           "padding": {
-            "value": "0.75rem 1.5rem",
+            "value": "0.75rem",
             "type": "spacing"
           }
         },
@@ -2019,7 +2019,7 @@ export const tokens = {
     }
   },
   "_metadata": {
-    "processedAt": "2025-09-27T07:35:29.590Z",
+    "processedAt": "2025-09-27T07:41:51.563Z",
     "version": "2.0.0"
   }
 };
