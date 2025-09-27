@@ -12,14 +12,10 @@ export default {
   output: {
     css: 'styles/tokens.css',
     typescript: 'types/tokens.d.ts',
-    // Prefer Tailwind presets instead of writing root config
-    tailwindPresetEsm: 'tokens.tailwind.preset.js',
-    tailwindPresetCjs: 'tokens.tailwind.preset.cjs',
+    tailwind: 'tailwind.config.js',
     scss: 'styles/_tokens.scss',
     json: 'data/tokens.json',
-    javascript: 'data/tokens.js',
-    tokensCjs: 'data/tokens.cjs',
-    shadcnThemeCss: 'styles/shadcn-theme.css'
+    javascript: 'data/tokens.js'
     // Mobile platforms (added automatically based on init selection):
     // ios: 'platforms/ios/Colors.swift',
     // android: 'platforms/android/colors.xml',
@@ -28,15 +24,6 @@ export default {
     // flutter: 'platforms/flutter/design_tokens.dart',
     // kotlinCompose: 'platforms/kotlinCompose/DesignTokens.kt',
     // swiftui: 'platforms/swiftui/DesignTokens.swift'
-  },
-  // Shadcn behavior
-  shadcn: {
-    enable: true,
-    hsl: true,
-    format: 'rgb',
-    strict: false,
-    fallback: 'shadcn',
-    extend: { palettes: true, semantic: true, typography: true, spacing: true, shadows: true, radii: true, includeBrand: true }
   },
   nextjs: {
     // Next.js specific configuration

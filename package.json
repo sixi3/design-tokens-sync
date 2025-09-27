@@ -1,8 +1,8 @@
 {
   "name": "design-tokens-sync",
-  "version": "1.4.1",
+  "version": "2.0.0",
   "type": "module",
-  "description": "Automated design token syncing between Figma Token Studio and your codebase with built-in analytics",
+  "description": "Style Dictionary-powered design token syncing with semantic & component token support, advanced transforms, and build hooks",
   "keywords": [
     "design-tokens",
     "design-system",
@@ -12,7 +12,10 @@
     "tailwind",
     "automation",
     "ci-cd",
-    "analytics"
+    "analytics",
+    "style-dictionary",
+    "semantic-tokens",
+    "component-tokens"
   ],
   "homepage": "https://github.com/sixi3/design-tokens-sync",
   "bugs": {
@@ -64,6 +67,7 @@
     "chokidar": "^3.6.0",
     "commander": "^11.0.0",
     "cosmiconfig": "^8.3.6",
+    "design-tokens-sync": "^2.0.0",
     "fs-extra": "^11.3.0",
     "glob": "^10.4.5",
     "inquirer": "^9.3.7",
@@ -81,7 +85,6 @@
     "@typescript-eslint/parser": "^7.2.0",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.19",
-    "design-tokens-sync": "^1.2.11",
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.6",

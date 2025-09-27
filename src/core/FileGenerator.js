@@ -13,27 +13,18 @@ export class FileGenerator {
   /**
    * Generate all configured output files
    */
-  async generateAll(tokens, config) {
+  async generateAll(tokens, config, context = {}) {
     const results = {};
 
     // Generate CSS custom properties
     if (config.output.css) {
-      const includeUtilities = !!(config.css && config.css.includeUtilities);
-      results.css = await this.generateCSS(tokens, config.output.css, { includeUtilities });
+      const options = { customCSS: context.customCSS };
+      results.css = await this.generateCSS(tokens, config.output.css, options);
     }
 
-    // Generate Tailwind config (deprecated path)
+    // Generate Tailwind config
     if (config.output.tailwind) {
-      console.warn('⚠️  Deprecation: Generating a root Tailwind config. Prefer presets via output.tailwindPresetEsm/Cjs.');
       results.tailwind = await this.generateTailwindConfig(tokens, config.output.tailwind);
-    }
-
-    // Generate Tailwind presets (preferred)
-    if (config.output.tailwindPresetEsm) {
-      results.tailwindPresetEsm = await this.generateTailwindPreset(tokens, config.output.tailwindPresetEsm, 'esm');
-    }
-    if (config.output.tailwindPresetCjs) {
-      results.tailwindPresetCjs = await this.generateTailwindPreset(tokens, config.output.tailwindPresetCjs, 'cjs');
     }
 
     // Generate TypeScript definitions
@@ -91,31 +82,14 @@ export class FileGenerator {
       results.javascript = await this.generateJavaScript(tokens, config.output.javascript);
     }
 
-    // Generate CommonJS tokens output
-    if (config.output.tokensCjs) {
-      results.tokensCjs = await this.generateTokensCjs(tokens, config.output.tokensCjs);
-    }
-
-    // Generate shadcn theme CSS bridge
-    if (config.shadcn && config.shadcn.enable && config.output.shadcnThemeCss) {
-      results.shadcnThemeCss = await this.generateShadcnThemeCss(tokens, config.output.shadcnThemeCss, {
-        hsl: config.shadcn.hsl !== false,
-        format: config.shadcn.format || 'hsl',
-        mapping: config.shadcn.mapping || {},
-        strict: !!config.shadcn.strict,
-        fallback: config.shadcn.fallback || 'shadcn',
-        extend: config.shadcn.extend || {}
-      });
-    }
-
     return results;
   }
 
   /**
    * Generate CSS custom properties file
    */
-  async generateCSS(tokens, outputPath, options = {}) {
-    const css = this.generateCSSCustomProperties(tokens, options);
+  async generateCSS(tokens, outputPath) {
+    const css = this.generateCSSCustomProperties(tokens);
     
     await fs.ensureDir(path.dirname(outputPath));
     await fs.writeFile(outputPath, css);
@@ -127,7 +101,7 @@ export class FileGenerator {
   /**
    * Generate CSS custom properties string
    */
-  generateCSSCustomProperties(tokens, options = {}) {
+  generateCSSCustomProperties(tokens) {
     const cssVars = [];
     
     // Header comment
@@ -233,20 +207,45 @@ export class FileGenerator {
       cssVars.push('');
     }
 
+    // Component tokens
+    if (tokens.component) {
+      cssVars.push('  /* Component Tokens */');
+      Object.entries(tokens.component).forEach(([componentName, componentVariants]) => {
+        if (componentVariants && typeof componentVariants === 'object') {
+          Object.entries(componentVariants).forEach(([variantOrPropName, variantProps]) => {
+            // Check if this is a variant with multiple properties or a single property
+            if (variantProps && typeof variantProps === 'object' && variantProps.value === undefined) {
+              // This is a component variant with multiple properties (e.g., button.primary)
+              Object.entries(variantProps).forEach(([propName, propValue]) => {
+                const actualValue = this.getTokenValue(propValue);
+                cssVars.push(`  --component-${componentName}-${variantOrPropName}-${propName}: ${actualValue};`);
+              });
+            } else {
+              // This is a component with direct properties (e.g., card.backgroundColor)
+              const actualValue = this.getTokenValue(variantProps);
+              cssVars.push(`  --component-${componentName}-${variantOrPropName}: ${actualValue};`);
+            }
+          });
+        }
+      });
+      cssVars.push('');
+    }
+
     cssVars.push('}');
     cssVars.push('');
 
-    if (options.includeUtilities) {
-      cssVars.push('/* Utility Classes */');
-      if (tokens.colors) {
-        Object.entries(tokens.colors).forEach(([category, shades]) => {
-          if (shades && typeof shades === 'object') {
-            Object.keys(shades).forEach(shade => {
-              cssVars.push(`.text-${category}-${shade} { color: var(--color-${category}-${shade}); }`);
-            });
-          }
-        });
-      }
+    // Add utility classes
+    cssVars.push('/* Utility Classes */');
+
+    // Text colors
+    if (tokens.colors) {
+      Object.entries(tokens.colors).forEach(([category, shades]) => {
+        if (shades && typeof shades === 'object') {
+          Object.keys(shades).forEach(shade => {
+            cssVars.push(`.text-${category}-${shade} { color: var(--color-${category}-${shade}); }`);
+          });
+        }
+      });
     }
 
     return cssVars.join('\n');
@@ -263,56 +262,6 @@ export class FileGenerator {
     
     console.log(`✅ Generated Tailwind config: ${outputPath}`);
     return { path: outputPath, content: configContent };
-  }
-
-  /**
-   * Generate Tailwind preset (ESM or CJS)
-   */
-  async generateTailwindPreset(tokens, outputPath, format = 'esm') {
-    const presetObject = this.generateTailwindPresetObject(tokens);
-    const content = format === 'cjs'
-      ? `/** @type {import('tailwindcss').Config} */
-// Design Tokens - Auto-generated Tailwind Preset (CJS)
-// Do not edit this file manually
-
-module.exports = ${JSON.stringify(presetObject, null, 2)};
-`
-      : `/** @type {import('tailwindcss').Config} */
-// Design Tokens - Auto-generated Tailwind Preset (ESM)
-// Do not edit this file manually
-
-export default ${JSON.stringify(presetObject, null, 2)};
-`;
-    await fs.ensureDir(path.dirname(outputPath));
-    await fs.writeFile(outputPath, content);
-    console.log(`✅ Generated Tailwind preset: ${outputPath}`);
-    return { path: outputPath, content };
-  }
-
-  /**
-   * Preset object builder: { theme: { extend: ... } }
-   */
-  generateTailwindPresetObject(tokens) {
-    const extend = {};
-    if (tokens.colors && Object.keys(tokens.colors).length > 0) extend.colors = tokens.colors;
-    if (tokens.spacing && Object.keys(tokens.spacing).length > 0) extend.spacing = tokens.spacing;
-    if (tokens.borderRadius && Object.keys(tokens.borderRadius).length > 0) extend.borderRadius = tokens.borderRadius;
-    if (tokens.typography) {
-      if (tokens.typography.fontFamily && Object.keys(tokens.typography.fontFamily).length > 0) extend.fontFamily = tokens.typography.fontFamily;
-      if (tokens.typography.fontSize && Object.keys(tokens.typography.fontSize).length > 0) extend.fontSize = tokens.typography.fontSize;
-      if (tokens.typography.fontWeight && Object.keys(tokens.typography.fontWeight).length > 0) extend.fontWeight = tokens.typography.fontWeight;
-      if (tokens.typography.lineHeight && Object.keys(tokens.typography.lineHeight).length > 0) extend.lineHeight = tokens.typography.lineHeight;
-      if (tokens.typography.letterSpacing && Object.keys(tokens.typography.letterSpacing).length > 0) extend.letterSpacing = tokens.typography.letterSpacing;
-    }
-    if (tokens.shadows && Object.keys(tokens.shadows).length > 0) extend.boxShadow = tokens.shadows;
-    if (tokens.opacity && Object.keys(tokens.opacity).length > 0) extend.opacity = tokens.opacity;
-    if (tokens.zIndex && Object.keys(tokens.zIndex).length > 0) extend.zIndex = tokens.zIndex;
-    if (tokens.transitions) {
-      if (tokens.transitions.duration && Object.keys(tokens.transitions.duration).length > 0) extend.transitionDuration = tokens.transitions.duration;
-      if (tokens.transitions.easing && Object.keys(tokens.transitions.easing).length > 0) extend.transitionTimingFunction = tokens.transitions.easing;
-    }
-    if (tokens.breakpoints && Object.keys(tokens.breakpoints).length > 0) extend.screens = tokens.breakpoints;
-    return { theme: { extend } };
   }
 
   /**
@@ -478,8 +427,8 @@ export default ${JSON.stringify(config, null, 2)};
       types.push('  };');
     }
     if (tokens.breakpoints) types.push('  breakpoints: Record<string, string>;');
-    types.push('  source?: string;');
-    types.push('  lastLoaded?: string;');
+    types.push('  source: string;');
+    types.push('  lastLoaded: string;');
     types.push('}');
     types.push('');
 
@@ -487,14 +436,6 @@ export default ${JSON.stringify(config, null, 2)};
     types.push('// Token value constants');
     types.push('declare const tokens: DesignTokens;');
     types.push('export default tokens;');
-
-    // Named exports (align with JS emitter)
-    if (tokens.colors) types.push('export const colors: Colors;');
-    if (tokens.spacing) types.push('export const spacing: Spacing;');
-    if (tokens.typography) types.push('export const typography: Typography;');
-    if (tokens.borderRadius) types.push('export const borderRadius: Record<string, string>;');
-    if (tokens.shadows) types.push('export const shadows: Record<string, string>;');
-    if (tokens.opacity) types.push('export const opacity: Record<string, string>;');
 
     return types.join('\n');
   }
@@ -1802,597 +1743,5 @@ export default ${JSON.stringify(config, null, 2)};
     js.push('export default tokens;');
 
     return js.join('\n');
-  }
-
-  /**
-   * Generate CommonJS tokens module matching ESM shape
-   */
-  async generateTokensCjs(tokens, outputPath) {
-    const cleanTokens = { ...tokens };
-    delete cleanTokens.source;
-    delete cleanTokens.lastLoaded;
-
-    const obj = {
-      tokens: cleanTokens,
-      ...(cleanTokens.colors ? { colors: cleanTokens.colors } : {}),
-      ...(cleanTokens.spacing ? { spacing: cleanTokens.spacing } : {}),
-      ...(cleanTokens.typography ? { typography: cleanTokens.typography } : {}),
-      ...(cleanTokens.borderRadius ? { borderRadius: cleanTokens.borderRadius } : {}),
-      ...(cleanTokens.shadows ? { shadows: cleanTokens.shadows } : {}),
-      ...(cleanTokens.opacity ? { opacity: cleanTokens.opacity } : {})
-    };
-
-    const cjs = [
-      '// Design Tokens - Auto-generated CommonJS Module',
-      '// Do not edit this file manually',
-      '',
-      `module.exports = ${JSON.stringify(obj, null, 2)};`,
-      'module.exports.default = module.exports.tokens;',
-      ''
-    ].join('\n');
-
-    await fs.ensureDir(path.dirname(outputPath));
-    await fs.writeFile(outputPath, cjs);
-    console.log(`✅ Generated Tokens (CJS): ${outputPath}`);
-    return { path: outputPath, content: cjs };
-  }
-
-  /**
-   * Generate shadcn theme CSS for :root and .dark
-   */
-  async generateShadcnThemeCss(tokens, outputPath, options = {}) {
-    const content = this.buildShadcnThemeCss(tokens, options);
-    await fs.ensureDir(path.dirname(outputPath));
-    await fs.writeFile(outputPath, content);
-    console.log(`✅ Generated shadcn theme CSS: ${outputPath}`);
-    return { path: outputPath, content };
-  }
-
-  buildShadcnThemeCss(tokens, { hsl = true, mapping = {}, format = 'hsl', strict = false, fallback = 'shadcn', extend = {} } = {}) {
-    const get = (obj, pathStr) => pathStr.split('.').reduce((o, k) => (o && o[k] !== undefined ? o[k] : undefined), obj);
-    
-    // Smart color getter that tries multiple path patterns
-    const color = (paths, hardcodedFallback) => {
-      const pathsToTry = Array.isArray(paths) ? paths : [paths];
-      
-      for (const pathStr of pathsToTry) {
-        // Try the path as-is first
-        let v = get(tokens, pathStr);
-        
-        // If not found and doesn't start with 'core', try prefixing with 'core.'
-        if (v === undefined && !pathStr.startsWith('core.')) {
-          v = get(tokens, `core.${pathStr}`);
-        }
-        
-        // Handle Token Studio format (object with value property)
-        if (v && typeof v === 'object' && v.value !== undefined) {
-          v = v.value;
-        }
-        
-        // If we found a valid value, check if it's a Token Studio reference
-        if (typeof v === 'string' && v.length > 0) {
-          // Handle Token Studio references like "{core.colors.blue.500}"
-          if (v.startsWith('{') && v.endsWith('}')) {
-            const refPath = v.slice(1, -1); // Remove { }
-            let refValue = get(tokens, refPath);
-            
-            // Handle nested Token Studio format
-            if (refValue && typeof refValue === 'object' && refValue.value !== undefined) {
-              refValue = refValue.value;
-            }
-            
-            if (typeof refValue === 'string' && refValue.length > 0) {
-              return this.formatColorForShadcn(refValue, format);
-            }
-          } else {
-            // Direct color value
-            return this.formatColorForShadcn(v, format);
-          }
-        }
-      }
-      
-      // Fallback behavior
-      if (strict || fallback === 'none') {
-        // In strict mode or explicit none fallback, return an empty string to omit var
-        return '';
-      }
-      return this.formatColorForShadcn(hardcodedFallback, format);
-    };
-
-    // Try to get radius from multiple possible paths
-    const radiusPaths = ['borderRadius.md', 'core.borderRadius.md', 'borderRadius.base', 'core.borderRadius.base'];
-    let radius = '0.375rem';
-    for (const path of radiusPaths) {
-      const r = get(tokens, path);
-      if (r) {
-        radius = (typeof r === 'object' && r.value) ? r.value : r;
-        break;
-      }
-    }
-
-    // Defaults with multiple path fallbacks (can be overridden by mapping)
-    const light = {
-      background: color([
-        'semantic.colors.background.primary',
-        'semantic.colors.background.secondary',
-        // Transformed tokens place semantic under colors
-        'colors.background.primary',
-        'colors.background.secondary',
-        'colors.gray.50',
-        'colors.neutral.50',
-        'colors.primary.50'
-      ], '#ffffff'),
-      foreground: color([
-        'semantic.colors.text.primary',
-        'colors.text.primary',
-        'colors.gray.900',
-        'colors.neutral.900',
-        'colors.primary.900'
-      ], '#111827'),
-      primary: color([
-        'semantic.colors.brand.primary',
-        'colors.brand.primary',
-        'colors.blue.500',
-        'colors.primary.500',
-        'colors.primary.600'
-      ], '#3b82f6'),
-      'primary-foreground': color([
-        'semantic.colors.text.inverse',
-        'colors.gray.50',
-        'colors.neutral.50',
-        'colors.primary.50'
-      ], '#f9fafb'),
-      secondary: color([
-        'semantic.colors.background.tertiary',
-        'colors.background.tertiary',
-        'colors.gray.100',
-        'colors.neutral.100',
-        'colors.primary.100'
-      ], '#f3f4f6'),
-      'secondary-foreground': color([
-        'semantic.colors.text.secondary',
-        'colors.text.secondary',
-        'colors.gray.900',
-        'colors.neutral.900'
-      ], '#111827'),
-      muted: color([
-        'semantic.colors.background.tertiary',
-        'colors.gray.100',
-        'colors.neutral.100'
-      ], '#f3f4f6'),
-      'muted-foreground': color([
-        'semantic.colors.text.muted',
-        'colors.text.muted',
-        'colors.gray.600',
-        'colors.neutral.600'
-      ], '#4b5563'),
-      accent: color([
-        'colors.gray.100',
-        'colors.neutral.100'
-      ], '#f3f4f6'),
-      'accent-foreground': color([
-        'semantic.colors.text.primary',
-        'colors.gray.900',
-        'colors.neutral.900'
-      ], '#111827'),
-      destructive: color([
-        'semantic.colors.feedback.error',
-        'colors.feedback.error',
-        'colors.red.500',
-        'colors.error.100',
-        'colors.error.300',
-        'colors.red.600'
-      ], '#ef4444'),
-      'destructive-foreground': color([
-        'semantic.colors.text.inverse',
-        'colors.gray.50',
-        'colors.neutral.50'
-      ], '#f9fafb'),
-      border: color([
-        // Prefer transformed semantic under colors
-        'colors.border.default',
-        'colors.border.light',
-        // Also try raw semantic path in case of direct use
-        'semantic.colors.border.default',
-        'semantic.colors.border.light',
-        // Prefer lighter gray before darker
-        'colors.gray.200',
-        'colors.neutral.200',
-        'colors.gray.500'
-      ], '#e5e7eb'),
-      input: color([
-        'colors.border.default',
-        'semantic.colors.border.default',
-        'colors.gray.200',
-        'colors.neutral.200',
-        'colors.gray.500'
-      ], '#e5e7eb'),
-      ring: color([
-        'semantic.colors.brand.primary',
-        'colors.brand.primary',
-        'colors.primary.500'
-      ], '#3b82f6'),
-      radius
-    };
-    
-    // Dark mode - try to use appropriate dark variants
-    const dark = {
-      background: color([
-        'semantic.colors.background.inverse',
-        'colors.background.inverse',
-        'colors.primary.500',
-        'colors.gray.900',
-        'colors.neutral.900'
-      ], '#0b1220'),
-      foreground: color([
-        'semantic.colors.text.inverse',
-        'colors.gray.50',
-        'colors.neutral.50'
-      ], '#f9fafb'),
-      primary: color([
-        'semantic.colors.brand.secondary',
-        'colors.brand.secondary',
-        'colors.primary.600',
-        'colors.primary.500'
-      ], '#2563eb'),
-      'primary-foreground': color([
-        'semantic.colors.text.inverse',
-        'colors.gray.50',
-        'colors.neutral.50'
-      ], '#f9fafb'),
-      secondary: color([
-        'colors.gray.800',
-        'colors.neutral.800',
-        'colors.primary.800'
-      ], '#1f2937'),
-      'secondary-foreground': color([
-        'semantic.colors.text.inverse',
-        'colors.gray.50',
-        'colors.neutral.50'
-      ], '#f9fafb'),
-      muted: color([
-        'colors.gray.800',
-        'colors.neutral.800'
-      ], '#1f2937'),
-      'muted-foreground': color([
-        'colors.gray.400',
-        'colors.neutral.400'
-      ], '#9ca3af'),
-      accent: color([
-        'colors.gray.800',
-        'colors.neutral.800'
-      ], '#1f2937'),
-      'accent-foreground': color([
-        'semantic.colors.text.inverse',
-        'colors.gray.50',
-        'colors.neutral.50'
-      ], '#f9fafb'),
-      destructive: color([
-        'semantic.colors.feedback.error',
-        'colors.error.100',
-        'colors.error.300',
-        'colors.red.600'
-      ], '#dc2626'),
-      'destructive-foreground': color([
-        'semantic.colors.text.inverse',
-        'colors.gray.50',
-        'colors.neutral.50'
-      ], '#f9fafb'),
-      border: color([
-        'colors.gray.800',
-        'colors.neutral.800',
-        'colors.primary.800'
-      ], '#1f2937'),
-      input: color([
-        'colors.gray.800',
-        'colors.neutral.800'
-      ], '#1f2937'),
-      ring: color([
-        'semantic.colors.brand.secondary',
-        'colors.brand.secondary',
-        'colors.primary.600'
-      ], '#2563eb'),
-      radius
-    };
-
-    // Apply mapping overrides
-    const resolveMappingRef = (refPath) => {
-      // Try as-is against transformed tokens
-      let val = get(tokens, refPath);
-      if (val !== undefined) return val;
-
-      // Map Token Studio-style paths to transformed structure
-      const candidates = [];
-      // colors
-      candidates.push(refPath.replace(/^core\.colors\./, 'colors.'));
-      candidates.push(refPath.replace(/^semantic\.colors\./, 'colors.'));
-      // non-color categories
-      candidates.push(refPath.replace(/^core\./, ''));
-      candidates.push(refPath.replace(/^semantic\./, ''));
-      // semantic colors sometimes reside under colors.* after transform
-      if (refPath.startsWith('semantic.colors.')) {
-        const rest = refPath.replace(/^semantic\.colors\./, '');
-        candidates.push(`colors.${rest}`);
-      }
-      for (const candidate of candidates) {
-        if (!candidate || candidate === refPath) continue;
-        val = get(tokens, candidate);
-        if (val !== undefined) return val;
-      }
-      return undefined;
-    };
-
-    const applyOverrides = (target, overrides) => {
-      Object.entries(overrides || {}).forEach(([k, v]) => {
-        if (typeof v === 'string') {
-          // If it's a token reference, resolve it first
-          if (v.startsWith('{') && v.endsWith('}')) {
-            const tokenPath = v.slice(1, -1); // Remove { }
-            // Try to get the actual value
-            let resolvedValue = resolveMappingRef(tokenPath);
-
-            // Handle Token Studio format (object with value property)
-            if (resolvedValue && typeof resolvedValue === 'object' && resolvedValue.value !== undefined) {
-              resolvedValue = resolvedValue.value;
-            }
-            
-            // Handle array values (like font families)
-            if (Array.isArray(resolvedValue)) {
-              resolvedValue = resolvedValue.join(', ');
-            }
-            
-            // If we found a value, use it, otherwise use fallback
-            if (resolvedValue !== undefined) {
-              // For non-color values (spacing, typography, etc.), don't convert to HSL
-              const isColorValue = k.includes('color') || k.includes('background') || k.includes('foreground') || 
-                                 k.includes('border') || k.includes('primary') || k.includes('secondary') ||
-                                 k.includes('destructive') || k.includes('ring') || k.includes('muted') ||
-                                 k.includes('accent') || k.includes('input');
-              target[k] = isColorValue ? this.formatColorForShadcn(resolvedValue, format) : resolvedValue;
-            } else {
-              target[k] = v; // Keep as fallback if resolution fails
-            }
-          } else {
-            // If it's a direct value, format appropriately
-            const isColorValue = k.includes('color') || k.includes('background') || k.includes('foreground') || 
-                               k.includes('border') || k.includes('primary') || k.includes('secondary') ||
-                               k.includes('destructive') || k.includes('ring') || k.includes('muted') ||
-                               k.includes('accent') || k.includes('input');
-            target[k] = isColorValue ? this.formatColorForShadcn(v, format) : v;
-          }
-        }
-      });
-    };
-    applyOverrides(light, mapping.light);
-    applyOverrides(dark, mapping.dark);
-
-    const toCssVars = (obj, includeComments = false) => {
-      return Object.entries(obj)
-        .map(([k, v]) => {
-          if (k === 'radius') {
-            return `  --${k}: ${v};`;
-          }
-          
-          if (!v) {
-            // Skip undefined/empty values (strict mode omission)
-            return null;
-          }
-
-          if (includeComments && format === 'rgb' && typeof v === 'string' && v.includes(' ')) {
-            // Try to convert RGB back to hex for comment
-            const rgbMatch = v.match(/^(\d+)\s+(\d+)\s+(\d+)$/);
-            if (rgbMatch) {
-              const [, r, g, b] = rgbMatch;
-              const hex = '#' + [r, g, b].map(x => parseInt(x).toString(16).padStart(2, '0').toUpperCase()).join('');
-              return `  --${k}: ${v}; /* ${hex} */`;
-            }
-          }
-          
-          return `  --${k}: ${v};`;
-        })
-        .filter(Boolean)
-        .join('\n');
-    };
-
-    const includeComments = format === 'rgb';
-    const lightComment = includeComments ? '  /* Map design tokens to shadcn variables */' : '';
-    
-    const lines = [
-      ':root {',
-      lightComment,
-      toCssVars(light, includeComments)
-    ];
-
-    // Extended palettes
-    if (extend && extend.palettes && tokens.colors) {
-      const addPalette = (prefix, obj) => {
-        if (!obj || typeof obj !== 'object') return;
-        Object.entries(obj).forEach(([shade, val]) => {
-          if (typeof val === 'string') {
-            lines.push(`  --${prefix}-${shade}: ${this.formatColorForShadcn(val, format)};`);
-          } else if (val && typeof val === 'object') {
-            addPalette(`${prefix}-${shade}`, val);
-          }
-        });
-      };
-
-      // Emit color scales by category
-      const categories = ['primary', 'gray', 'success', 'warning', 'error', 'info', 'neutral'];
-      categories.forEach(name => {
-        if (tokens.colors[name]) addPalette(name, tokens.colors[name]);
-      });
-
-      // Root success/warning/etc values with foreground
-      const fg = (tokens.colors.gray && tokens.colors.gray['50']) || '#FFFFFF';
-      ['success','warning','error','info','neutral'].forEach(g => {
-        const group = tokens.colors[g];
-        if (group && group['100']) {
-          lines.push(`  --${g}: ${this.formatColorForShadcn(group['100'], format)};`);
-          lines.push(`  --${g}-foreground: ${this.formatColorForShadcn(fg, format)};`);
-        }
-      });
-    }
-
-    // Extended semantic
-    if (extend && extend.semantic && tokens.colors) {
-      // In 'actual' profile, the baseline shadcn vars already cover semantic highlights.
-      // Avoid emitting extra text/background/border/brand keys to match expected shape.
-      if (!extend.profile || extend.profile !== 'actual') {
-        const tryGet = (p) => p.split('.').reduce((o, k) => (o && o[k] !== undefined ? o[k] : undefined), tokens);
-        const pushIf = (key, val) => { if (val) lines.push(`  --${key}: ${this.formatColorForShadcn(val, format)};`); };
-        pushIf('text-primary', tryGet('colors.text.primary'));
-        pushIf('text-secondary', tryGet('colors.text.secondary'));
-        pushIf('text-tertiary', tryGet('colors.text.tertiary'));
-        pushIf('text-inverse', tryGet('colors.text.inverse'));
-        pushIf('text-muted', tryGet('colors.text.muted'));
-        pushIf('background-primary', tryGet('colors.background.primary'));
-        pushIf('background-secondary', tryGet('colors.background.secondary'));
-        pushIf('background-tertiary', tryGet('colors.background.tertiary'));
-        pushIf('background-inverse', tryGet('colors.background.inverse'));
-        pushIf('border-default', tryGet('colors.border.default'));
-        pushIf('border-hover', tryGet('colors.border.hover'));
-        pushIf('border-focus', tryGet('colors.border.focus'));
-        pushIf('border-light', tryGet('colors.border.light'));
-        if (extend.includeBrand !== false) {
-          pushIf('brand-primary', tryGet('colors.brand.primary'));
-          pushIf('brand-secondary', tryGet('colors.brand.secondary'));
-          pushIf('brand-tertiary', tryGet('colors.brand.tertiary'));
-        }
-      }
-    }
-
-    // Extended radii
-    if (extend && extend.radii && tokens.borderRadius) {
-      const r = tokens.borderRadius;
-      if (r.sm) lines.push(`  --radius-sm: ${r.sm};`);
-      if (r.lg) lines.push(`  --radius-lg: ${r.lg};`);
-      if (r.xl) lines.push(`  --radius-xl: ${r.xl};`);
-      if (r['2xl']) lines.push(`  --radius-2xl: ${r['2xl']};`);
-      if (r.full) lines.push(`  --radius-full: ${r.full};`);
-    }
-
-    // Extended spacing
-    if (extend && extend.spacing && tokens.spacing) {
-      const subset = Array.isArray(extend.spacingSubset) && extend.spacingSubset.length > 0
-        ? extend.spacingSubset
-        : (extend.profile === 'actual'
-            ? ['0','1','2','3','4','5','6','8','10','12','16','20','24']
-            : null);
-      if (subset) {
-        subset.forEach(k => { if (tokens.spacing[k]) lines.push(`  --spacing-${k}: ${tokens.spacing[k]};`); });
-      } else {
-        Object.entries(tokens.spacing).forEach(([k, v]) => lines.push(`  --spacing-${k}: ${v};`));
-      }
-    }
-
-    // Extended typography
-    if (extend && extend.typography && tokens.typography) {
-      const t = tokens.typography;
-      const quoteIfNeeded = (s) => (typeof s === 'string' && /[^A-Za-z0-9_-]/.test(s) ? `"${s}"` : s);
-      if (t.fontFamily?.sans) {
-        const val = Array.isArray(t.fontFamily.sans) ? t.fontFamily.sans.map(quoteIfNeeded).join(', ') : t.fontFamily.sans;
-        lines.push(`  --font-sans: ${val};`);
-      }
-      if (t.fontFamily?.mono) {
-        const val = Array.isArray(t.fontFamily.mono) ? t.fontFamily.mono.map(quoteIfNeeded).join(', ') : t.fontFamily.mono;
-        lines.push(`  --font-mono: ${val};`);
-      }
-      Object.entries(t.fontSize || {}).forEach(([k, v]) => lines.push(`  --font-size-${k}: ${v};`));
-      Object.entries(t.fontWeight || {}).forEach(([k, v]) => lines.push(`  --font-weight-${k}: ${v};`));
-      Object.entries(t.lineHeight || {}).forEach(([k, v]) => lines.push(`  --line-height-${k}: ${v};`));
-    }
-
-    // Extended shadows
-    if (extend && extend.shadows && tokens.shadows) {
-      Object.entries(tokens.shadows).forEach(([k, v]) => lines.push(`  --shadow-${k}: ${v};`));
-    }
-
-    // Close :root and write .dark
-    lines.push('}', '', '.dark {', toCssVars(dark, includeComments), '}');
-
-    return lines.filter(line => line !== '').join('\n');
-  }
-
-  formatColor(value, hsl = true) {
-    if (!value) return hsl ? '0 0% 100%' : '#ffffff';
-    if (!hsl) return value;
-    if (value.startsWith('#')) return this.hexToHslTriple(value);
-    if (value.startsWith('rgb')) {
-      // naive rgb to hsl conversion fallback
-      try {
-        const m = value.match(/rgba?\(([^)]+)\)/);
-        if (m) {
-          const [r, g, b] = m[1].split(',').slice(0, 3).map((n) => parseFloat(n.trim()));
-          return this.rgbToHslTriple(r, g, b);
-        }
-      } catch {}
-    }
-    return value;
-  }
-
-  formatColorForShadcn(value, format = 'hsl') {
-    if (!value) return format === 'hsl' ? '0 0% 100%' : '255 255 255';
-    
-    if (format === 'rgb') {
-      // Convert to RGB format for shadcn
-      if (value.startsWith('#')) {
-        return this.hexToRgbTriple(value);
-      }
-      if (value.startsWith('rgb')) {
-        const m = value.match(/rgba?\(([^)]+)\)/);
-        if (m) {
-          const [r, g, b] = m[1].split(',').slice(0, 3).map((n) => Math.round(parseFloat(n.trim())));
-          return `${r} ${g} ${b}`;
-        }
-      }
-      return value;
-    } else {
-      // Default HSL format
-      return this.formatColor(value, true);
-    }
-  }
-
-  hexToHslTriple(hex) {
-    const c = hex.replace('#', '');
-    const bigint = c.length === 3
-      ? parseInt(c.split('').map((ch) => ch + ch).join(''), 16)
-      : parseInt(c, 16);
-    const r = (bigint >> 16) & 255;
-    const g = (bigint >> 8) & 255;
-    const b = bigint & 255;
-    return this.rgbToHslTriple(r, g, b);
-  }
-
-  hexToRgbTriple(hex) {
-    const c = hex.replace('#', '');
-    const bigint = c.length === 3
-      ? parseInt(c.split('').map((ch) => ch + ch).join(''), 16)
-      : parseInt(c, 16);
-    const r = (bigint >> 16) & 255;
-    const g = (bigint >> 8) & 255;
-    const b = bigint & 255;
-    return `${r} ${g} ${b}`;
-  }
-
-  rgbToHslTriple(r, g, b) {
-    r /= 255; g /= 255; b /= 255;
-    const max = Math.max(r, g, b), min = Math.min(r, g, b);
-    let h, s, l = (max + min) / 2;
-    if (max === min) {
-      h = s = 0;
-    } else {
-      const d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-      switch (max) {
-        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-        case g: h = (b - r) / d + 3; break;
-        case b: h = (r - g) / d + 4; break;
-      }
-      h *= 60;
-    }
-    const H = Math.round(h || 0);
-    const S = Math.round(s * 100);
-    const L = Math.round(l * 100);
-    return `${H} ${S}% ${L}%`;
   }
 } 

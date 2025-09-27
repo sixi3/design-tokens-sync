@@ -10,23 +10,7 @@ module.exports = {
   
   output: {
     css: 'src/styles/tokens.css',
-    // Prefer Tailwind presets
-    tailwindPresetEsm: 'tokens.tailwind.preset.js',
-    tailwindPresetCjs: 'tokens.tailwind.preset.cjs',
-    // Dual-module tokens
-    javascript: 'src/data/tokens.js',
-    tokensCjs: 'src/data/tokens.cjs',
-    // Shadcn theme CSS bridge
-    shadcnThemeCss: 'src/styles/shadcn-theme.css'
-  },
-  // Shadcn behavior
-  shadcn: {
-    enable: true,
-    hsl: true,
-    format: 'rgb',
-    strict: false,
-    fallback: 'shadcn',
-    extend: { palettes: true, semantic: true, typography: true, spacing: true, shadows: true, radii: true, includeBrand: true }
+    tailwind: 'tailwind.config.js'
   },
   
   git: {

@@ -123,12 +123,6 @@ export async function init(options) {
     },
     {
       type: 'confirm',
-      name: 'enableShadcn',
-      message: 'Generate shadcn UI theme variables (shadcn-theme.css)?',
-      default: true
-    },
-    {
-      type: 'confirm',
       name: 'enableGit',
       message: 'Enable automatic git commits for token changes?',
       default: true
@@ -195,10 +189,6 @@ export async function init(options) {
     // Update package.json scripts
     await updatePackageScripts();
     spinner.text = 'Updated package.json scripts';
-
-    // Update package.json exports (optional, safe merge)
-    await updatePackageExports(answers);
-    spinner.text = 'Updated package.json exports';
     
     // Create .gitignore entries
     await updateGitignore();
@@ -209,13 +199,6 @@ export async function init(options) {
     spinner.text = 'Copied example components';
     
     spinner.succeed('Design tokens initialized successfully!');
-
-    // Scaffold Tailwind root config if none exists
-    const shouldScaffold = true; // default on; guarded by createConfigFile defaults too
-    if (shouldScaffold && !(await tailwindConfigExists())) {
-      await scaffoldRootTailwindConfig(answers);
-      console.log(chalk.green('✓ Created tailwind.config.ts (presets + dark mode)'));
-    }
     
     // Show next steps
     console.log(chalk.green('\n✨ Setup complete! Next steps:\n'));
@@ -304,14 +287,7 @@ async function createConfigFile(answers) {
       },
       output: {
         // Basic web outputs
-        css: 'tokens.css',
-        // Preferred Tailwind outputs (presets)
-        tailwindPresetEsm: 'tokens.tailwind.preset.js',
-        tailwindPresetCjs: 'tokens.tailwind.preset.cjs',
-        // Dual-module tokens (CJS)
-        tokensCjs: 'tokens.cjs',
-        // Shadcn theme CSS bridge
-        shadcnThemeCss: 'shadcn-theme.css'
+        css: 'tokens.css'
       },
       git: {
         enabled: answers.enableGit,
@@ -323,27 +299,15 @@ async function createConfigFile(answers) {
         enabled: answers.enableAnalytics,
         autoCollect: true
       },
-      css: { includeUtilities: false },
-      init: { scaffoldRootTailwindConfig: true },
-      shadcn: { enable: true, hsl: true, format: 'rgb', strict: false, fallback: 'shadcn', extend: { palettes: true, semantic: true, typography: true, spacing: true, shadows: true, radii: true, includeBrand: true } },
       watch: {
         enabled: true,
         ignore: ['node_modules', '.git', 'dist', 'build']
       }
     };
     
-    // Respect user's choice for shadcn generation
-    if (!answers.enableShadcn) {
-      delete config.output.shadcnThemeCss;
-      if (config.shadcn) config.shadcn.enable = false;
-    }
-
     // Add optional outputs based on user preferences
-    // Tailwind preset preferred; do not write root config
-    if (!answers.outputFormats.includes('tailwind')) {
-      // If user did not select tailwind, remove presets
-      delete config.output.tailwindPresetEsm;
-      delete config.output.tailwindPresetCjs;
+    if (answers.outputFormats.includes('tailwind')) {
+      config.output.tailwind = 'tailwind.config.js';
     }
     
     if (answers.outputFormats.includes('typescript')) {
@@ -414,8 +378,7 @@ async function createConfigFile(answers) {
 // Example outputs you can add:
 //   css: 'src/styles/tokens.css'
 //   typescript: 'src/types/tokens.d.ts'
-//   tailwindPresetEsm: 'tokens.tailwind.preset.js'
-//   tailwindPresetCjs: 'tokens.tailwind.preset.cjs'
+//   tailwind: 'tailwind.config.js'
 //   scss: 'src/styles/tokens.scss'
 //   ios: 'mobile/ios/Colors.swift'
 //   android: 'mobile/android/colors.xml'
@@ -494,31 +457,6 @@ ${exportSyntax} ${JSON.stringify(config, null, 2)};
         config.git.enabled = answers.enableGit;
         config.analytics.enabled = answers.enableAnalytics;
         
-        // Prefer Tailwind presets in new setups
-        if (!config.output.tailwindPresetEsm) config.output.tailwindPresetEsm = 'tokens.tailwind.preset.js';
-        if (!config.output.tailwindPresetCjs) config.output.tailwindPresetCjs = 'tokens.tailwind.preset.cjs';
-        if (config.output.tailwind) delete config.output.tailwind;
-
-        if (!config.output.shadcnThemeCss) {
-          const cssPath = getOutputPath(answers.framework, 'css');
-          config.output.shadcnThemeCss = (cssPath || 'src/styles/tokens.css').replace(/tokens\.css$/, 'shadcn-theme.css');
-        }
-        if (!config.output.tokensCjs) {
-          const jsPath = getOutputPath(answers.framework, 'javascript');
-          config.output.tokensCjs = (jsPath || 'src/data/tokens.js').replace(/\.js$/, '.cjs');
-        }
-
-        // Ensure new top-level flags
-        if (!config.css) config.css = { includeUtilities: false };
-        if (!config.init) config.init = { scaffoldRootTailwindConfig: true };
-        if (!config.shadcn) config.shadcn = { enable: true, hsl: true, format: 'rgb', strict: false, fallback: 'shadcn', extend: { palettes: true, semantic: true, typography: true, spacing: true, shadows: true, radii: true, includeBrand: true } };
-
-        // Respect user's choice for shadcn generation
-        config.shadcn.enable = answers.enableShadcn;
-        if (!answers.enableShadcn && config.output.shadcnThemeCss) {
-          delete config.output.shadcnThemeCss;
-        }
-
         // Regenerate the config file content
         configContent = `// Design Tokens Configuration for ${answers.framework.charAt(0).toUpperCase() + answers.framework.slice(1)}
 // Generated by design-tokens-sync
@@ -626,14 +564,6 @@ export default ${JSON.stringify(config, null, 2)};
       // Update git and analytics settings
       configContent = configContent.replace(/enabled: true,/, `enabled: ${answers.enableGit},`);
       configContent = configContent.replace(/enabled: true,(\s*\/\/ analytics)/, `enabled: ${answers.enableAnalytics},$1`);
-
-      // Respect user's choice for shadcn generation
-      if (!answers.enableShadcn) {
-        // Remove shadcnThemeCss output line if present
-        configContent = configContent.replace(/\n\s*shadcnThemeCss:\s*'.*?',?\n?/g, '\n');
-        // Set shadcn.enable to false if present
-        configContent = configContent.replace(/(shadcn:\s*\{[\s\S]*?enable:)\s*true/, '$1 false');
-      }
     }
     
     await fs.writeFile('design-tokens.config.js', configContent);
@@ -648,11 +578,7 @@ export default ${JSON.stringify(config, null, 2)};
         }
       },
       output: {
-        css: getOutputPath(answers.framework, 'css'),
-        tailwindPresetEsm: 'tokens.tailwind.preset.js',
-        tailwindPresetCjs: 'tokens.tailwind.preset.cjs',
-        tokensCjs: (getOutputPath(answers.framework, 'javascript') || 'src/data/tokens.js').replace(/\.js$/, '.cjs'),
-        shadcnThemeCss: (getOutputPath(answers.framework, 'css') || 'src/styles/tokens.css').replace(/tokens\.css$/, 'shadcn-theme.css')
+        css: getOutputPath(answers.framework, 'css')
       },
       git: {
         enabled: answers.enableGit,
@@ -664,22 +590,15 @@ export default ${JSON.stringify(config, null, 2)};
         enabled: answers.enableAnalytics,
         autoCollect: true
       },
-      css: { includeUtilities: false },
-      init: { scaffoldRootTailwindConfig: true },
-      shadcn: { enable: true, hsl: true, format: 'rgb', strict: false, fallback: 'shadcn', extend: { palettes: true, semantic: true, typography: true, spacing: true, shadows: true, radii: true, includeBrand: true } },
       watch: {
         enabled: true,
         ignore: ['node_modules', '.git', 'dist', 'build']
       }
     };
-
-    // Respect user's choice for shadcn generation
-    if (!answers.enableShadcn) {
-      delete config.output.shadcnThemeCss;
-      if (config.shadcn) config.shadcn.enable = false;
-    }
     
-    // Tailwind handled via presets by default
+    if (answers.outputFormats.includes('tailwind')) {
+      config.output.tailwind = 'tailwind.config.js';
+    }
     
     if (answers.outputFormats.includes('typescript')) {
       config.output.typescript = getOutputPath(answers.framework, 'types');
@@ -1018,114 +937,6 @@ async function updatePackageScripts() {
   }
   
   await fs.writeJSON(packagePath, pkg, { spaces: 2 });
-}
-
-async function updatePackageExports(answers) {
-  const packagePath = 'package.json';
-  if (!await fs.pathExists(packagePath)) return;
-  const pkg = await fs.readJSON(packagePath);
-  pkg.exports = pkg.exports || {};
-  const esmTokensPath = getOutputPath(answers.framework, 'javascript') || 'src/data/tokens.js';
-  const cjsTokensPath = esmTokensPath.replace(/\.js$/, '.cjs');
-  // Suggest exports only if using defaults; safe merge without overwriting
-  if (!pkg.exports['./tokens']) {
-    pkg.exports['./tokens'] = {
-      import: `./${esmTokensPath}`,
-      require: `./${cjsTokensPath}`,
-      default: `./${esmTokensPath}`
-    };
-  }
-  if (!pkg.exports['./tailwind-preset']) {
-    pkg.exports['./tailwind-preset'] = {
-      import: './tokens.tailwind.preset.js',
-      require: './tokens.tailwind.preset.cjs',
-      default: './tokens.tailwind.preset.js'
-    };
-  }
-  await fs.writeJSON(packagePath, pkg, { spaces: 2 });
-}
-
-async function tailwindConfigExists() {
-  const candidates = [
-    'tailwind.config.ts',
-    'tailwind.config.js',
-    'tailwind.config.cjs',
-    'tailwind.config.mjs'
-  ];
-  for (const f of candidates) {
-    if (await fs.pathExists(f)) return true;
-  }
-  return false;
-}
-
-async function scaffoldRootTailwindConfig(answers) {
-  // Create a minimal shadcn-friendly Tailwind config that uses the preset
-  const isNext = answers.framework === 'next';
-  const importPath = './tokens.tailwind.preset.js';
-  const contentGlobs = isNext
-    ? `['./app/**/*.{js,ts,jsx,tsx}', './components/**/*.{js,ts,jsx,tsx}', './pages/**/*.{js,ts,jsx,tsx}', './src/**/*.{js,ts,jsx,tsx}']`
-    : `['./src/**/*.{js,ts,jsx,tsx}', './app/**/*.{js,ts,jsx,tsx}', './components/**/*.{js,ts,jsx,tsx}']`;
-
-  const configTs = answers.enableShadcn ? `import tokensPreset from '${importPath}';
-import type { Config } from 'tailwindcss';
-
-const config: Config = {
-  darkMode: ['class'],
-  content: ${contentGlobs},
-  presets: [tokensPreset],
-  plugins: [require('tailwindcss-animate')],
-  theme: {
-    extend: {
-      colors: {
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))'
-        },
-        secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))'
-        },
-        muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))'
-        },
-        accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))'
-        },
-        destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))'
-        },
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))'
-      },
-      borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)'
-      }
-    }
-  }
-};
-
-export default config;
-` : `import tokensPreset from '${importPath}';
-import type { Config } from 'tailwindcss';
-
-const config: Config = {
-  darkMode: ['class'],
-  content: ${contentGlobs},
-  presets: [tokensPreset]
-};
-
-export default config;
-`;
-
-  await fs.writeFile('tailwind.config.ts', configTs);
 }
 
 async function updateGitignore() {

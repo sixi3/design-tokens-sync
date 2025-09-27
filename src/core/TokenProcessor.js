@@ -5,6 +5,8 @@ import { loadConfig } from '../utils/config.js';
 import { TokenValidator } from './TokenValidator.js';
 import { FileGenerator } from './FileGenerator.js';
 import { GitManager } from './GitManager.js';
+import { TransformEngine } from './TransformEngine.js';
+import { BuildHooks } from './BuildHooks.js';
 
 /**
  * Core token processing engine
@@ -20,6 +22,11 @@ export class TokenProcessor {
     this.validator = new TokenValidator(options);
     this.fileGenerator = new FileGenerator(options);
     this.gitManager = new GitManager(options);
+    this.transformEngine = new TransformEngine(options);
+    this.buildHooks = new BuildHooks();
+
+    // Register common hooks
+    this.buildHooks.registerCommonHooks();
   }
 
   /**
@@ -75,22 +82,45 @@ export class TokenProcessor {
   }
 
   /**
-   * Transform raw tokens into standardized format
+   * Transform raw tokens into standardized format with Style Dictionary-like capabilities
    */
   transformTokens(rawTokens) {
+    // Resolve all token references first
+    const resolvedTokens = this.resolveAllTokenReferences(rawTokens);
+
+    // Apply transforms and filters if configured
+    let processedTokens = resolvedTokens;
+    if (this.config?.transforms) {
+      processedTokens = this.transformEngine.applyTransforms(resolvedTokens, this.config.transforms);
+    }
+    if (this.config?.filters) {
+      processedTokens = this.transformEngine.applyFilters(processedTokens, this.config.filters);
+    }
+
     const transformed = {
-      colors: this.extractColors(rawTokens),
-      spacing: this.extractSpacing(rawTokens),
-      typography: this.extractTypography(rawTokens),
-      borderRadius: this.extractBorderRadius(rawTokens),
-      sizing: this.extractSizing(rawTokens),
-      shadows: this.extractShadows(rawTokens),
-      opacity: this.extractOpacity(rawTokens),
-      zIndex: this.extractZIndex(rawTokens),
-      transitions: this.extractTransitions(rawTokens),
-      breakpoints: this.extractBreakpoints(rawTokens),
+      // Core tokens
+      colors: this.extractColors(processedTokens),
+      spacing: this.extractSpacing(processedTokens),
+      typography: this.extractTypography(processedTokens),
+      borderRadius: this.extractBorderRadius(processedTokens),
+      sizing: this.extractSizing(processedTokens),
+      shadows: this.extractShadows(processedTokens),
+      opacity: this.extractOpacity(processedTokens),
+      zIndex: this.extractZIndex(processedTokens),
+      transitions: this.extractTransitions(processedTokens),
+      breakpoints: this.extractBreakpoints(processedTokens),
+
+      // Semantic tokens (new)
+      semantic: this.extractSemanticTokens(processedTokens),
+
+      // Component tokens (new)
+      component: this.extractComponentTokens(processedTokens),
+
+      // Metadata
       source: 'tokens.json',
-      lastLoaded: new Date().toISOString()
+      lastLoaded: new Date().toISOString(),
+      _resolvedTokens: resolvedTokens, // Store resolved tokens for advanced processing
+      _processedTokens: processedTokens // Store processed tokens after transforms
     };
 
     return transformed;
@@ -293,6 +323,96 @@ export class TokenProcessor {
   }
 
   /**
+   * Extract semantic tokens (text, background, border, brand, feedback)
+   */
+  extractSemanticTokens(rawTokens) {
+    const semantic = {};
+
+    if (rawTokens.semantic) {
+      // Process each semantic category
+      Object.keys(rawTokens.semantic).forEach(category => {
+        semantic[category] = this.preserveNestedStructure(rawTokens.semantic[category]);
+      });
+    }
+
+    return semantic;
+  }
+
+  /**
+   * Extract component tokens (button, card, input, navbar, table, status)
+   */
+  extractComponentTokens(rawTokens) {
+    const component = {};
+
+    if (rawTokens.component) {
+      // Process each component category
+      Object.keys(rawTokens.component).forEach(componentName => {
+        component[componentName] = this.extractComponentProperties(rawTokens.component[componentName]);
+      });
+    }
+
+    return component;
+  }
+
+  /**
+   * Extract component properties with proper structure preservation
+   */
+  extractComponentProperties(componentData) {
+    const properties = {};
+
+    Object.entries(componentData).forEach(([propName, propValue]) => {
+      if (propValue && typeof propValue === 'object' && propValue.value !== undefined) {
+        // Token Studio format with .value
+        properties[propName] = this.resolveTokenValue(propValue.value, this.rawTokens);
+      } else if (propValue && typeof propValue === 'object' && !Array.isArray(propValue)) {
+        // Nested properties (like button variants)
+        properties[propName] = {};
+        Object.entries(propValue).forEach(([subProp, subValue]) => {
+          if (subValue && typeof subValue === 'object' && subValue.value !== undefined) {
+            properties[propName][subProp] = this.resolveTokenValue(subValue.value, this.rawTokens);
+          } else {
+            properties[propName][subProp] = subValue;
+          }
+        });
+      } else {
+        // Direct value
+        properties[propName] = this.resolveTokenValue(propValue, this.rawTokens);
+      }
+    });
+
+    return properties;
+  }
+
+  /**
+   * Resolve all token references in the entire token tree (Style Dictionary style)
+   */
+  resolveAllTokenReferences(rawTokens) {
+    const resolved = JSON.parse(JSON.stringify(rawTokens)); // Deep clone
+
+    // Recursively resolve all references
+    const resolveObject = (obj) => {
+      if (typeof obj === 'string') {
+        return this.resolveTokenValue(obj, rawTokens);
+      } else if (Array.isArray(obj)) {
+        return obj.map(item => resolveObject(item));
+      } else if (obj && typeof obj === 'object') {
+        const resolvedObj = {};
+        for (const [key, value] of Object.entries(obj)) {
+          if (key === 'value' && typeof value === 'string') {
+            resolvedObj[key] = this.resolveTokenValue(value, rawTokens);
+          } else {
+            resolvedObj[key] = resolveObject(value);
+          }
+        }
+        return resolvedObj;
+      }
+      return obj;
+    };
+
+    return resolveObject(resolved);
+  }
+
+  /**
    * Generic token category extractor
    */
   extractTokenCategory(rawTokens, category) {
@@ -406,16 +526,27 @@ export class TokenProcessor {
       }
 
       const tokensPath = path.resolve(this.config.tokens.input);
-      
+
       if (!await fs.pathExists(tokensPath)) {
         throw new Error(`Tokens file not found: ${tokensPath}`);
       }
 
-      const rawTokens = await fs.readJSON(tokensPath);
+      let rawTokens = await fs.readJSON(tokensPath);
       console.log(`✅ Design tokens loaded from: ${tokensPath}`);
+
+      // Execute beforeProcess hooks
+      let context = await this.buildHooks.executeHooks('beforeProcess', {
+        rawTokens,
+        config: this.config,
+        options
+      });
+      rawTokens = context.rawTokens;
 
       // Store raw tokens for token resolution
       this.rawTokens = rawTokens;
+
+      // Execute beforeValidate hooks
+      context = await this.buildHooks.executeHooks('beforeValidate', context);
 
       // Validate using raw tokens (preserves Figma Token Studio format)
       const validation = await this.validator.validate(rawTokens);
@@ -428,11 +559,25 @@ export class TokenProcessor {
         console.warn('⚠️ Token warnings:', validation.warnings);
       }
 
+      // Execute afterValidate hooks
+      context.validation = validation;
+      context = await this.buildHooks.executeHooks('afterValidate', context);
+
       // Transform tokens for file generation
       this.tokens = this.transformTokens(rawTokens);
 
+      // Execute afterProcess hooks
+      context.tokens = this.tokens;
+      context = await this.buildHooks.executeHooks('afterProcess', context);
+
+      // Execute beforeGenerate hooks
+      context = await this.buildHooks.executeHooks('beforeGenerate', context);
+
       // Generate output files
-      await this.fileGenerator.generateAll(this.tokens, this.config);
+      await this.fileGenerator.generateAll(this.tokens, this.config, context);
+
+      // Execute afterGenerate hooks
+      context = await this.buildHooks.executeHooks('afterGenerate', context);
 
       // Git operations
       if (this.config.git.enabled && !options.noGit) {

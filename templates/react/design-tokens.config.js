@@ -9,28 +9,13 @@ export default {
       optional: ['semantic', 'component', 'core.shadows', 'core.borderRadius']
     }
   },
-  // Shadcn behavior
-  shadcn: {
-    enable: true,
-    hsl: true,
-    format: 'rgb',
-    strict: false,
-    fallback: 'shadcn',
-    extend: { palettes: true, semantic: true, typography: true, spacing: true, shadows: true, radii: true, includeBrand: true }
-  },
   output: {
     css: 'src/styles/tokens.css',
     typescript: 'src/types/tokens.d.ts',
-    // Prefer Tailwind presets instead of writing root config
-    tailwindPresetEsm: 'tokens.tailwind.preset.js',
-    tailwindPresetCjs: 'tokens.tailwind.preset.cjs',
+    tailwind: 'tailwind.config.js',
     scss: 'src/styles/_tokens.scss',
     json: 'src/data/tokens.json',
-    javascript: 'src/data/tokens.js',
-    // Dual-module tokens
-    tokensCjs: 'src/data/tokens.cjs',
-    // Shadcn theme CSS bridge
-    shadcnThemeCss: 'src/styles/shadcn-theme.css'
+    javascript: 'src/data/tokens.js'
     // Mobile platforms (added automatically based on init selection):
     // ios: 'src/platforms/ios/Colors.swift',
     // android: 'src/platforms/android/colors.xml',

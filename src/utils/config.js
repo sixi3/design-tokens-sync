@@ -21,18 +21,11 @@ const configSchema = Joi.object({
       Joi.string(),
       Joi.array().items(Joi.string())
     ).default('src/styles/tokens.css'),
-    tailwind: Joi.string().allow(null).default(null),
-    // New preset outputs
-    tailwindPresetEsm: Joi.string().allow(null).default('tokens.tailwind.preset.js'),
-    tailwindPresetCjs: Joi.string().allow(null).default('tokens.tailwind.preset.cjs'),
+    tailwind: Joi.string().allow(null).default('tailwind.config.js'),
     typescript: Joi.string().allow(null),
     scss: Joi.string().allow(null),
     javascript: Joi.string().allow(null),
-    // New dual-module tokens output (CJS)
-    tokensCjs: Joi.string().allow(null).default('src/data/tokens.cjs'),
     json: Joi.string().allow(null),
-    // Shadcn theme CSS bridge
-    shadcnThemeCss: Joi.string().allow(null).default('src/styles/shadcn-theme.css'),
     ios: Joi.string().allow(null),
     android: Joi.string().allow(null),
     xamarin: Joi.string().allow(null),
@@ -58,44 +51,10 @@ const configSchema = Joi.object({
     outputDir: Joi.string().default('.tokens-analytics')
   }),
   
-  // CSS generation options
-  css: Joi.object({
-    includeUtilities: Joi.boolean().default(false)
-  }).default({ includeUtilities: false }),
-  
   watch: Joi.object({
     enabled: Joi.boolean().default(true),
     ignore: Joi.array().items(Joi.string()).default(['node_modules', '.git'])
   }),
-
-  // Init scaffolding
-  init: Joi.object({
-    scaffoldRootTailwindConfig: Joi.boolean().default(true)
-  }).default({ scaffoldRootTailwindConfig: true }),
-
-  // Shadcn specific settings
-  shadcn: Joi.object({
-    enable: Joi.boolean().default(true),
-    hsl: Joi.boolean().default(true),
-    format: Joi.string().valid('hsl', 'rgb').default('rgb'),
-    mapping: Joi.object().optional(),
-    // When strict is true, variables without a resolvable token are omitted (no hardcoded defaults)
-    strict: Joi.boolean().default(false),
-    // Fallback behavior when no token found: 'shadcn' (use standard palette) or 'none'
-    fallback: Joi.string().valid('shadcn', 'none').default('shadcn'),
-    extend: Joi.object({
-      profile: Joi.string().valid('actual').optional(),
-      palettes: Joi.boolean().default(true),
-      semantic: Joi.boolean().default(true),
-      components: Joi.boolean().default(false),
-      typography: Joi.boolean().default(true),
-      spacing: Joi.boolean().default(true),
-      spacingSubset: Joi.array().items(Joi.string()).optional(),
-      shadows: Joi.boolean().default(true),
-      radii: Joi.boolean().default(true),
-      includeBrand: Joi.boolean().default(true)
-    }).default({ palettes: true, semantic: true, components: false, typography: true, spacing: true, shadows: true, radii: true, includeBrand: true })
-  }).default({ enable: true, hsl: true, format: 'rgb', strict: false, fallback: 'shadcn', extend: { palettes: true, semantic: true, components: false, typography: true, spacing: true, shadows: true, radii: true, includeBrand: true } }),
   
   // Framework-specific configurations
   react: Joi.object({
@@ -178,10 +137,6 @@ export async function loadConfig(configPathOrSearchFrom = process.cwd()) {
       if (error) {
         throw new Error(`Configuration validation error: ${error.message}`);
       }
-      // Deprecation notice for root tailwind output
-      if (value?.output?.tailwind) {
-        console.warn('⚠️  Deprecation: output.tailwind will be removed in a future version. Generate presets via output.tailwindPresetEsm/Cjs and reference them from your root Tailwind config.');
-      }
       return value;
     }
     
@@ -212,10 +167,7 @@ export function createDefaultConfig() {
     },
     output: {
       css: 'src/styles/tokens.css',
-      tailwindPresetEsm: 'tokens.tailwind.preset.js',
-      tailwindPresetCjs: 'tokens.tailwind.preset.cjs',
-      tokensCjs: 'src/data/tokens.cjs',
-      shadcnThemeCss: 'src/styles/shadcn-theme.css'
+      tailwind: 'tailwind.config.js'
     },
     git: {
       enabled: true,
@@ -226,25 +178,6 @@ export function createDefaultConfig() {
     analytics: {
       enabled: true,
       autoCollect: true
-    },
-    css: { includeUtilities: false },
-    init: { scaffoldRootTailwindConfig: true },
-    shadcn: { 
-      enable: true, 
-      hsl: true, 
-      format: 'rgb',
-      strict: false,
-      fallback: 'shadcn',
-      extend: { 
-        palettes: true, 
-        semantic: true, 
-        components: false, 
-        typography: true, 
-        spacing: true, 
-        shadows: true, 
-        radii: true, 
-        includeBrand: true 
-      }
     }
   };
 } 

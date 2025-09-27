@@ -1,28 +1,60 @@
-# Exclude local test and generated artifacts from npm package
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-token-test.json
-token-test.fixed.json
-design-tokens-test.config.js
-shadcn-theme.test.css
-design-tokens-extended.config.js
-test.json
-shadcn-gen.css
-shadcn-gen.extended.css
+# Build outputs (keep only src/)
+dist/
+build/
 
-tokens.tailwind.preset.js
-tokens.tailwind.preset.cjs
+# Development files
+*.test.js
+*.spec.js
+test/
+tests/
+__tests__/
+coverage/
 
-# Generated outputs during local testing
-src/styles/
-src/data/
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-# Local analytics/cache
-.tokens-analytics/
-.tokens-sync-cache.json
-
-# VCS and OS files (safety)
-.git/
+# OS files
 .DS_Store
 Thumbs.db
 
+# Git
+.git/
+.gitignore
+
+# CI/CD
+.github/
+.travis.yml
+.appveyor.yml
+
+# Documentation (except README)
+*.md
+!README.md
+
+# Config files (consumer-specific)
+design-tokens.config.js
+tokens.json
+tailwind.config.*
+
+# Lock files
+package-lock.json
+yarn.lock
+
+# Development scripts and tools
+scripts/
+*.config.js
+!jest.config.js
+
+# Temporary files
+*.tmp
+*.temp
 
