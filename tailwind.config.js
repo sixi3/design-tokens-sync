@@ -59,96 +59,11 @@ export default {
           "900": "#000000"
         },
         "status": {
-          "success": {
-            "background": {
-              "value": "#E6F4EC",
-              "type": "color"
-            },
-            "text": {
-              "value": "#2D8659",
-              "type": "color"
-            },
-            "border": {
-              "value": "#51A037",
-              "type": "color"
-            }
-          },
-          "warning": {
-            "background": {
-              "value": "#FFF8E1",
-              "type": "color"
-            },
-            "text": {
-              "value": "#FF9800",
-              "type": "color"
-            }
-          },
-          "error": {
-            "background": {
-              "value": "#FCF0EE",
-              "type": "color"
-            },
-            "text": {
-              "value": "#CA7373",
-              "type": "color"
-            },
-            "border": {
-              "value": "#A22F2F",
-              "type": "color"
-            }
-          },
-          "info": {
-            "background": {
-              "value": "#F7E9F2",
-              "type": "color"
-            },
-            "text": {
-              "value": "#C965A7",
-              "type": "color"
-            }
-          },
-          "verified": {
-            "background": {
-              "value": "#51A037",
-              "type": "color"
-            },
-            "text": {
-              "value": "#FFFFFF",
-              "type": "color"
-            }
-          }
-        },
-        "text": {
-          "primary": "#673391",
-          "secondary": "#757575",
-          "tertiary": "#909BAA",
-          "inverse": "#FFFFFF",
-          "muted": "#708497",
           "success": "#2D8659",
           "warning": "#FF9800",
-          "error": "#CA7373"
-        },
-        "background": {
-          "primary": "#F7E9F2",
-          "secondary": "#FFFFFF",
-          "tertiary": "#F3F8FC",
-          "inverse": "#673391",
-          "surface": "#FFFFFF",
-          "overlay": "rgba(0, 0, 0, 0.75)"
-        },
-        "border": {
-          "default": "#E7EDF0",
-          "hover": "#D991C1",
-          "focus": "#673391",
-          "light": "#E7EDF0",
-          "success": "#51A037",
-          "error": "#CA7373"
-        },
-        "brand": {
-          "primary": "#673391",
-          "secondary": "#76479B",
-          "tertiary": "#E8BDD9",
-          "accent": "#B22382"
+          "error": "#CA7373",
+          "info": "#BA398F",
+          "verified": "#51A037"
         }
       },
       "spacing": {
