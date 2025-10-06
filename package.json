@@ -57,17 +57,17 @@
     "release:patch": "standard-version --release-as patch",
     "release:dry": "standard-version --dry-run",
     "postrelease": "git push --follow-tags origin main && npm publish",
-    "tokens:sync": "design-tokens-sync sync",
-    "tokens:watch": "design-tokens-sync watch",
-    "tokens:analytics": "design-tokens-sync analytics report",
-    "tokens:validate": "design-tokens-sync validate"
+    "tokens:sync": "./bin/design-tokens-sync.js sync",
+    "tokens:watch": "./bin/design-tokens-sync.js watch",
+    "tokens:analytics": "./bin/design-tokens-sync.js analytics report",
+    "tokens:validate": "./bin/design-tokens-sync.js validate"
   },
   "dependencies": {
     "chalk": "^5.4.1",
     "chokidar": "^3.6.0",
     "commander": "^11.0.0",
     "cosmiconfig": "^8.3.6",
-    "design-tokens-sync": "^2.0.0",
+    "design-tokens-sync": "^2.1.0",
     "fs-extra": "^11.3.0",
     "glob": "^10.4.5",
     "inquirer": "^9.3.7",

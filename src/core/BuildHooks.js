@@ -64,7 +64,7 @@ export class BuildHooks {
       if (context.rawTokens) {
         const issues = this.validateReferences(context.rawTokens);
         if (issues.length > 0) {
-          console.warn('⚠️ Token reference issues found:', issues);
+          console.warn('⚠️ Token reference issues found (UPDATED CODE):', issues);
         }
       }
       return context;
@@ -110,16 +110,26 @@ export class BuildHooks {
         for (const [key, value] of Object.entries(obj)) {
           const currentPath = [...path, key];
 
-          if (typeof value === 'string' && value.startsWith('{') && value.endsWith('}')) {
-            const refPath = value.slice(1, -1);
-            if (!tokenPaths.has(refPath)) {
-              issues.push(`Invalid reference "${refPath}" in ${currentPath.join('.')}`);
-            }
-          } else if (value && typeof value === 'object' && value.value !== undefined) {
-            if (typeof value.value === 'string' && value.value.startsWith('{') && value.value.endsWith('}')) {
-              const refPath = value.value.slice(1, -1);
+          if (typeof value === 'string') {
+            // Check for token references in the string (may contain multiple)
+            const refRegex = /\{([^}]+)\}/g;
+            let match;
+            while ((match = refRegex.exec(value)) !== null) {
+              const refPath = match[1];
               if (!tokenPaths.has(refPath)) {
                 issues.push(`Invalid reference "${refPath}" in ${currentPath.join('.')}`);
+              }
+            }
+          } else if (value && typeof value === 'object' && value.value !== undefined) {
+            if (typeof value.value === 'string') {
+              // Check for token references in the value string (may contain multiple)
+              const refRegex = /\{([^}]+)\}/g;
+              let match;
+              while ((match = refRegex.exec(value.value)) !== null) {
+                const refPath = match[1];
+                if (!tokenPaths.has(refPath)) {
+                  issues.push(`Invalid reference "${refPath}" in ${currentPath.join('.')}`);
+                }
               }
             }
           } else {

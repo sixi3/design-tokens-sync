@@ -22,7 +22,7 @@ export class TokenValidator {
    */
   async validate(tokens) {
     await this.init();
-    
+
     const errors = [];
     const warnings = [];
     
@@ -64,18 +64,18 @@ export class TokenValidator {
    * Check if tokens are in Figma Token Studio format
    */
   isFigmaTokenStudioFormat(tokens) {
-    return tokens && (
-      tokens.core || 
-      tokens.semantic || 
-      tokens.$themes || 
+    return !!(tokens && (
+      tokens.core ||
+      tokens.semantic ||
+      tokens.$themes ||
       tokens.$metadata ||
       // Also detect direct Token Studio format with root-level categories (singular naming convention)
       (tokens.color && !tokens.colors) ||
       // Specific Token Studio format detection: has 'text' but not 'colors' (which indicates standard format)
       (tokens.text && !tokens.colors) ||
-      tokens.radius || 
+      tokens.radius ||
       tokens.sizing
-    );
+    ));
   }
 
   /**
@@ -83,19 +83,28 @@ export class TokenValidator {
    */
   extractTokensFromFigmaFormat(tokens) {
     const extracted = {};
-    
+
     // Handle nested format (core/semantic structure)
     if (tokens.core) {
       Object.assign(extracted, tokens.core);
     }
-    
+
     if (tokens.semantic) {
       // For semantic tokens, we need to be careful about merging
       // Let's add them under a semantic prefix to avoid conflicts
       Object.keys(tokens.semantic).forEach(category => {
         if (extracted[category]) {
-          // Merge with existing category
-          Object.assign(extracted[category], tokens.semantic[category]);
+          // For colors, semantic tokens have different structure than core tokens
+          // Core colors have shade-based structure (50, 100, etc.)
+          // Semantic colors have semantic structure (primary, secondary, etc.)
+          // So we should not merge them - keep them separate
+          if (category === 'colors') {
+            // Don't merge colors - semantic colors should be validated separately
+            extracted['semanticColors'] = tokens.semantic[category];
+          } else {
+            // For other categories, merge as before
+            Object.assign(extracted[category], tokens.semantic[category]);
+          }
         } else {
           // Add new category
           extracted[category] = tokens.semantic[category];
@@ -254,13 +263,26 @@ export class TokenValidator {
    */
   validateColors(tokens, errors, warnings) {
     // Extract tokens if in Figma format
-    const tokensToValidate = this.isFigmaTokenStudioFormat(tokens) 
-      ? this.extractTokensFromFigmaFormat(tokens) 
+    const tokensToValidate = this.isFigmaTokenStudioFormat(tokens)
+      ? this.extractTokensFromFigmaFormat(tokens)
       : tokens;
-      
-    if (!tokensToValidate.colors) return;
 
-    Object.entries(tokensToValidate.colors).forEach(([category, shades]) => {
+    // Validate core colors (shade-based structure)
+    if (tokensToValidate.colors) {
+      this.validateCoreColors(tokensToValidate.colors, errors, warnings);
+    }
+
+    // Validate semantic colors (semantic structure)
+    if (tokensToValidate.semanticColors) {
+      this.validateSemanticColors(tokensToValidate.semanticColors, errors, warnings);
+    }
+  }
+
+  /**
+   * Validate core colors (shade-based structure like primary.500)
+   */
+  validateCoreColors(colors, errors, warnings) {
+    Object.entries(colors).forEach(([category, shades]) => {
       if (!shades || typeof shades !== 'object') {
         errors.push(`Invalid color category structure: colors.${category}`);
         return;
@@ -269,7 +291,7 @@ export class TokenValidator {
       Object.entries(shades).forEach(([shade, tokenData]) => {
         // Handle both Token Studio format {value, type} and simple string values
         const value = this.getTokenValue(tokenData);
-        
+
         if (!this.isValidColor(value)) {
           errors.push(`Invalid color value: colors.${category}.${shade} = "${value}"`);
         }
@@ -293,6 +315,30 @@ export class TokenValidator {
         }
       }
     });
+  }
+
+  /**
+   * Validate semantic colors (semantic structure like text.primary)
+   */
+  validateSemanticColors(colors, errors, warnings) {
+    const validateSemanticColorCategory = (obj, path = '') => {
+      Object.entries(obj).forEach(([key, value]) => {
+        const currentPath = path ? `${path}.${key}` : key;
+
+        if (value && typeof value === 'object' && value.value !== undefined) {
+          // This is a semantic color token
+          const tokenValue = this.getTokenValue(value);
+          if (!this.isValidColor(tokenValue)) {
+            errors.push(`Invalid semantic color value: colors.${currentPath} = "${tokenValue}"`);
+          }
+        } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+          // This is a nested semantic category
+          validateSemanticColorCategory(value, currentPath);
+        }
+      });
+    };
+
+    validateSemanticColorCategory(colors);
   }
 
   /**

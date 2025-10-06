@@ -131,15 +131,12 @@ export class TokenProcessor {
    */
   extractColors(rawTokens) {
     const colors = {};
-    
+
     // Handle different Token Studio formats and flat format
-    if (rawTokens.core?.colors || rawTokens.semantic?.colors) {
-      // Token Studio format with core/semantic structure
-      const coreColors = rawTokens.core?.colors || {};
-      const semanticColors = rawTokens.semantic?.colors || {};
-      
+    if (rawTokens.core?.colors) {
+      // Token Studio format with core structure - only extract core colors
+      const coreColors = rawTokens.core.colors;
       Object.assign(colors, this.preserveNestedStructure(coreColors));
-      Object.assign(colors, this.preserveNestedStructure(semanticColors));
     } else if (rawTokens.color) {
       // Token Studio format with direct 'color' field (singular)
       Object.assign(colors, this.preserveNestedStructure(rawTokens.color));
@@ -477,11 +474,25 @@ export class TokenProcessor {
    * Resolve token references (e.g., {core.colors.primary.500})
    */
   resolveTokenValue(value, rawTokens = null) {
-    if (typeof value === 'string' && value.startsWith('{') && value.endsWith('}')) {
-      // This is a token reference - resolve it
-      const tokenPath = value.slice(1, -1); // Remove { and }
-      const resolvedValue = this.resolveTokenReference(tokenPath, rawTokens || this.rawTokens);
-      return resolvedValue !== undefined ? resolvedValue : value; // Return original if not found
+    if (typeof value === 'string') {
+      // Handle strings that may contain multiple token references
+      // Use regex to find all {token.path} patterns and replace them
+      const tokenRefRegex = /\{([^}]+)\}/g;
+      let resolvedValue = value;
+      let match;
+
+      while ((match = tokenRefRegex.exec(value)) !== null) {
+        const tokenPath = match[1]; // Extract token path without braces
+        const resolvedToken = this.resolveTokenReference(tokenPath, rawTokens || this.rawTokens);
+
+        if (resolvedToken !== undefined) {
+          // Replace the token reference with its resolved value
+          const tokenRef = `{${tokenPath}}`;
+          resolvedValue = resolvedValue.replace(tokenRef, resolvedToken);
+        }
+      }
+
+      return resolvedValue;
     }
     return value;
   }
@@ -549,7 +560,11 @@ export class TokenProcessor {
       context = await this.buildHooks.executeHooks('beforeValidate', context);
 
       // Validate using raw tokens (preserves Figma Token Studio format)
-      const validation = await this.validator.validate(rawTokens);
+      const { loadConfig } = await import('../utils/config.js');
+      const config = await loadConfig(this.options.configPath);
+      const { TokenValidator: ValidatorClass } = await import('./TokenValidator.js');
+      const validator = new ValidatorClass(config);
+      const validation = await validator.validate(rawTokens);
       if (!validation.isValid && !options.force) {
         console.error('❌ Token validation failed:', validation.errors);
         throw new Error('Token validation failed');
@@ -596,13 +611,13 @@ export class TokenProcessor {
   /**
    * Start watching tokens file for changes
    */
-  async watch() {
+  async watch(onChange, onError) {
     if (!this.config) {
       await this.init();
     }
 
     const tokensPath = path.resolve(this.config.tokens.input);
-    
+
     console.log(`👀 Watching for changes: ${tokensPath}`);
 
     this.watcher = chokidar.watch(tokensPath, {
@@ -618,13 +633,25 @@ export class TokenProcessor {
         this.tokens = null;
         this.rawTokens = null;
         await this.sync();
+
+        // Call optional callback
+        if (onChange) {
+          onChange('change', path);
+        }
       } catch (error) {
         console.error('❌ Auto-sync failed:', error.message);
+        // Call optional error callback
+        if (onError) {
+          onError(error);
+        }
       }
     });
 
     this.watcher.on('error', (error) => {
       console.error('❌ Watch error:', error.message);
+      if (onError) {
+        onError(error);
+      }
     });
 
     return this.watcher;

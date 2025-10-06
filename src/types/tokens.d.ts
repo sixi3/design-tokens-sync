@@ -14,7 +14,7 @@ export interface Colors {
     "800": string;
     "900": string;
   };
-  gray: {
+  accent: {
     "50": string;
     "100": string;
     "200": string;
@@ -29,6 +29,8 @@ export interface Colors {
   success: {
     "50": string;
     "100": string;
+    "200": string;
+    "300": string;
   };
   warning: {
     "50": string;
@@ -40,51 +42,24 @@ export interface Colors {
     "200": string;
     "300": string;
   };
-  info: {
-    "50": string;
-    "100": string;
-  };
   neutral: {
     "50": string;
     "100": string;
     "200": string;
     "300": string;
+    "400": string;
+    "500": string;
+    "600": string;
+    "700": string;
+    "800": string;
+    "900": string;
   };
-  text: {
-    "primary": string;
-    "secondary": string;
-    "tertiary": string;
-    "inverse": string;
-    "muted": string;
-  };
-  background: {
-    "primary": string;
-    "secondary": string;
-    "tertiary": string;
-    "inverse": string;
-  };
-  border: {
-    "default": string;
-    "hover": string;
-    "focus": string;
-    "light": string;
-  };
-  brand: {
-    "primary": string;
-    "secondary": string;
-    "tertiary": string;
-  };
-  feedback: {
+  status: {
     "success": string;
-    "success-bg": string;
     "warning": string;
-    "warning-bg": string;
     "error": string;
-    "error-bg": string;
     "info": string;
-    "info-bg": string;
-    "neutral": string;
-    "neutral-bg": string;
+    "verified": string;
   };
 }
 
@@ -106,7 +81,8 @@ export interface Spacing {
 
 export interface Typography {
   fontFamily: {
-    "sans": string;
+    "primary": string;
+    "secondary": string;
     "mono": string;
   };
   fontSize: {
